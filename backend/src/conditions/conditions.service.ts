@@ -7,9 +7,7 @@ import { WaterQualityResponseDto } from './dto/water-quality-response.dto';
 export class ConditionsService {
   constructor(@Inject(DATABASE) private readonly db: Knex) {}
 
-  async getWaterQuality(
-    beachId: number,
-    ): Promise<WaterQualityResponseDto> {
+  async getWaterQuality(beachId: number): Promise<WaterQualityResponseDto> {
     const beach = await this.db('beaches')
       .where({ id: beachId })
       .first('id');
@@ -45,7 +43,7 @@ export class ConditionsService {
       status: observation.status,
       source: 'DRNA',
       sourceUrl: observation.source_url,
-      observedAt: toIsoString(observation.sampled_at),
+      observedAt: toIsoDate(observation.sampled_at),
       retrievedAt: toIsoString(observation.retrieved_at),
       availability: 'available',
     };
@@ -54,4 +52,12 @@ export class ConditionsService {
 
 function toIsoString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;
+}
+
+function toIsoDate(value: Date | string): string {
+  if (typeof value === 'string') return value;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

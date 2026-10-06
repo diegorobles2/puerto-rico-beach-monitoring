@@ -7,8 +7,8 @@ describe('ConditionsService', () => {
       { id: 1 },
       {
         status: 'suitable',
-        sampled_at: '2026-10-04',
-        retrieved_at: '2026-10-04T12:30:00.000Z',
+        sampled_at: new Date(2026, 9, 4),
+        retrieved_at: new Date('2026-10-04T12:30:00.000Z'),
         source_url: 'https://www.drna.pr.gov/',
       },
     );
@@ -57,8 +57,8 @@ function createDbMock(
   observation:
     | {
         status: string;
-        sampled_at: string;
-        retrieved_at: string;
+        sampled_at: Date | string;
+        retrieved_at: Date | string;
         source_url: string;
       }
     | undefined,
