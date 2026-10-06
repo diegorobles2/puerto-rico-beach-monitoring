@@ -2,12 +2,13 @@
 
 A beach-centered decision-support platform that combines official safety data and local reports while showing exactly where the information came from and how current it is.
 
-This repository currently contains initial, compile-ready scaffolding only. Persistence, authentication, community-report submission, and live external-source integrations are intentionally not implemented.
+This repository contains the initial application scaffold and PostgreSQL schema. Authentication, community-report submission, and live external-source integrations are intentionally not implemented.
 
 ## Tech stack
 
 - Frontend: React, TypeScript, Vite, Tailwind CSS, React-Leaflet, Vitest, React Testing Library
 - Backend: NestJS, TypeScript, REST, Swagger/OpenAPI, Jest, Supertest
+- Database: Supabase PostgreSQL, Knex
 - CI: GitHub Actions
 
 ## Repository structure
@@ -48,6 +49,16 @@ cp frontend/.env.example frontend/.env
 
 On PowerShell, use `Copy-Item` instead of `cp` if needed.
 
+Set `DATABASE_URL` in `backend/.env`, then apply and verify the schema:
+
+```bash
+cd backend
+npm run db:migrate
+npm run db:verify
+```
+
+See `docs/architecture/database.md` for the database workflow and security notes.
+
 ## Run the backend
 
 ```bash
@@ -77,8 +88,7 @@ npm test
 
 ## Current limitations
 
-- Persistence and database support will be added later.
+- The initial database schema is present; ingestion and repository persistence are not implemented yet.
 - NWS and DRNA integrations are placeholders and make no external requests.
 - Authentication and community-report submission are not implemented.
 - Values in `.env` must be set for the local environment; never commit real secrets.
-
