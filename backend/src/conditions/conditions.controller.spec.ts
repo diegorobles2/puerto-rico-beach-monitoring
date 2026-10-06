@@ -35,9 +35,9 @@ describe('ConditionsController', () => {
       availability: 'available',
     });
 
-    const result = await controller.getWaterQuality('test-beach');
+    const result = await controller.getWaterQuality(1);
 
-    expect(service.getWaterQuality).toHaveBeenCalledWith('test-beach');
+    expect(service.getWaterQuality).toHaveBeenCalledWith(1);
 
     expect(result).toEqual({
       status: 'suitable',
@@ -58,9 +58,9 @@ describe('ConditionsController', () => {
       availability: 'unavailable',
     });
 
-    const result = await controller.getWaterQuality('test-beach');
+    const result = await controller.getWaterQuality(1);
 
-    expect(service.getWaterQuality).toHaveBeenCalledWith('test-beach');
+    expect(service.getWaterQuality).toHaveBeenCalledWith(1);
 
     expect(result).toEqual({
       status: 'unknown',

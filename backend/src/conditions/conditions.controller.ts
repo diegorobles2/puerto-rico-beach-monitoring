@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -26,7 +26,7 @@ export class ConditionsController {
     description: 'The requested beach identifier was not found.',
   })
   getWaterQuality(
-    @Param('beachId') beachId: string,
+    @Param('beachId', ParseIntPipe) beachId: number,
   ): Promise<WaterQualityResponseDto> {
     return this.service.getWaterQuality(beachId);
   }

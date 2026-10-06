@@ -15,7 +15,7 @@ describe('ConditionsService', () => {
 
     const service = new ConditionsService(db as never);
 
-    const result = await service.getWaterQuality('1');
+    const result = await service.getWaterQuality(1);
 
     expect(result).toEqual({
       status: 'suitable',
@@ -31,7 +31,7 @@ describe('ConditionsService', () => {
     const db = createDbMock({ id: 1 }, undefined);
     const service = new ConditionsService(db as never);
 
-    const result = await service.getWaterQuality('1');
+    const result = await service.getWaterQuality(1);
 
     expect(result).toEqual({
       status: 'unknown',
@@ -46,7 +46,7 @@ describe('ConditionsService', () => {
     const db = createDbMock(undefined, undefined);
     const service = new ConditionsService(db as never);
 
-    await expect(service.getWaterQuality('999')).rejects.toBeInstanceOf(
+    await expect(service.getWaterQuality(999)).rejects.toBeInstanceOf(
       NotFoundException,
     );
   });

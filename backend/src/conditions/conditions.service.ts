@@ -8,8 +8,8 @@ export class ConditionsService {
   constructor(@Inject(DATABASE) private readonly db: Knex) {}
 
   async getWaterQuality(
-    beachId: string,
-  ): Promise<WaterQualityResponseDto> {
+    beachId: number,
+    ): Promise<WaterQualityResponseDto> {
     const beach = await this.db('beaches')
       .where({ id: beachId })
       .first('id');
