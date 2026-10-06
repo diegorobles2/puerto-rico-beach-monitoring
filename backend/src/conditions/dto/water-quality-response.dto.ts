@@ -3,13 +3,12 @@ import type { WaterQualityStatus } from '../../types/domain';
 
 export type WaterQualityAvailability =
   | 'available'
-  | 'stale'
   | 'unavailable';
 
 export class WaterQualityResponseDto {
   @ApiProperty({
-    example: 'safe',
-    enum: ['safe', 'advisory', 'closed', 'unknown'],
+    example: 'suitable',
+    enum: ['suitable', 'advisory', 'unknown'],
     description: 'Normalized water-quality status.',
   })
   status!: WaterQualityStatus;
@@ -26,14 +25,14 @@ export class WaterQualityResponseDto {
   })
   sourceUrl?: string;
 
-  @ApiPropertyOptional({
-    example: '2026-10-04T12:00:00.000Z',
-    description: 'Time the water-quality condition was observed.',
+  @ApiProperty({
+    example: '2026-10-04',
+    description: 'Date the water-quality condition was observed.',
     nullable: true,
   })
   observedAt!: string | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: '2026-10-04T12:30:00.000Z',
     description: 'Time the application retrieved the source data.',
     nullable: true,
@@ -42,7 +41,7 @@ export class WaterQualityResponseDto {
 
   @ApiProperty({
     example: 'available',
-    enum: ['available', 'stale', 'unavailable'],
+    enum: ['available', 'unavailable'],
     description:
       'Whether normalized water-quality information is currently available.',
   })

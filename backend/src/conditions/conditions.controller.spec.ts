@@ -27,10 +27,10 @@ describe('ConditionsController', () => {
 
   it('returns normalized water-quality data for a beach', async () => {
     service.getWaterQuality.mockResolvedValue({
-      status: 'safe',
+      status: 'suitable',
       source: 'DRNA',
       sourceUrl: 'https://www.drna.pr.gov/',
-      observedAt: '2026-10-04T12:00:00.000Z',
+      observedAt: '2026-10-04',
       retrievedAt: '2026-10-04T12:30:00.000Z',
       availability: 'available',
     });
@@ -40,10 +40,10 @@ describe('ConditionsController', () => {
     expect(service.getWaterQuality).toHaveBeenCalledWith('test-beach');
 
     expect(result).toEqual({
-      status: 'safe',
+      status: 'suitable',
       source: 'DRNA',
       sourceUrl: 'https://www.drna.pr.gov/',
-      observedAt: '2026-10-04T12:00:00.000Z',
+      observedAt: '2026-10-04',
       retrievedAt: '2026-10-04T12:30:00.000Z',
       availability: 'available',
     });

@@ -1,57 +1,37 @@
-import { Test } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { ConditionsService } from './conditions.service';
-import { DrnaService } from '../data-sources/drna/drna.service';
 
 describe('ConditionsService', () => {
-  let service: ConditionsService;
-  let drnaService: jest.Mocked<DrnaService>;
-
-  beforeEach(async () => {
-    const drnaServiceMock = {
-      getWaterQuality: jest.fn(),
-    };
-
-    const module = await Test.createTestingModule({
-      providers: [
-        ConditionsService,
-        {
-          provide: DrnaService,
-          useValue: drnaServiceMock,
-        },
-      ],
-    }).compile();
-
-    service = module.get(ConditionsService);
-    drnaService = module.get(DrnaService);
-  });
-
-  it('returns normalized water-quality data when DRNA data is available', async () => {
-    drnaService.getWaterQuality.mockResolvedValue({
-      status: 'safe',
-      source: {
-        sourceName: 'DRNA',
-        sourceUrl: 'https://www.drna.pr.gov/',
-        observedAt: '2026-10-04T12:00:00.000Z',
-        retrievedAt: '2026-10-04T12:30:00.000Z',
+  it('returns normalized water-quality data when an observation exists', async () => {
+    const db = createDbMock(
+      { id: 1 },
+      {
+        status: 'suitable',
+        sampled_at: '2026-10-04',
+        retrieved_at: '2026-10-04T12:30:00.000Z',
+        source_url: 'https://www.drna.pr.gov/',
       },
-    });
+    );
 
-    const result = await service.getWaterQuality('test-beach');
+    const service = new ConditionsService(db as never);
+
+    const result = await service.getWaterQuality('1');
 
     expect(result).toEqual({
-      status: 'safe',
+      status: 'suitable',
       source: 'DRNA',
       sourceUrl: 'https://www.drna.pr.gov/',
-      observedAt: '2026-10-04T12:00:00.000Z',
+      observedAt: '2026-10-04',
       retrievedAt: '2026-10-04T12:30:00.000Z',
       availability: 'available',
     });
   });
 
-  it('returns unavailable when DRNA data is unavailable', async () => {
-    drnaService.getWaterQuality.mockResolvedValue(null);
+  it('returns unavailable when the beach exists but has no observation', async () => {
+    const db = createDbMock({ id: 1 }, undefined);
+    const service = new ConditionsService(db as never);
 
-    const result = await service.getWaterQuality('test-beach');
+    const result = await service.getWaterQuality('1');
 
     expect(result).toEqual({
       status: 'unknown',
@@ -61,4 +41,50 @@ describe('ConditionsService', () => {
       availability: 'unavailable',
     });
   });
+
+  it('throws NotFoundException when the beach does not exist', async () => {
+    const db = createDbMock(undefined, undefined);
+    const service = new ConditionsService(db as never);
+
+    await expect(service.getWaterQuality('999')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
 });
+
+function createDbMock(
+  beach: { id: number } | undefined,
+  observation:
+    | {
+        status: string;
+        sampled_at: string;
+        retrieved_at: string;
+        source_url: string;
+      }
+    | undefined,
+) {
+  return jest.fn((table: string) => {
+    if (table === 'beaches') {
+      return {
+        where: jest.fn().mockReturnValue({
+          first: jest.fn().mockResolvedValue(beach),
+        }),
+      };
+    }
+
+    if (table === 'water_quality_observations') {
+      const query = {
+        where: jest.fn(),
+        orderBy: jest.fn(),
+        first: jest.fn().mockResolvedValue(observation),
+      };
+
+      query.where.mockReturnValue(query);
+      query.orderBy.mockReturnValue(query);
+
+      return query;
+    }
+
+    throw new Error(`Unexpected table: ${table}`);
+  });
+}

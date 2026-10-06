@@ -1,17 +1,37 @@
-import { Injectable } from '@nestjs/common';
-import { DrnaService } from '../data-sources/drna/drna.service';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import type { Knex } from 'knex';
+import { DATABASE } from '../database/database.module';
 import { WaterQualityResponseDto } from './dto/water-quality-response.dto';
 
 @Injectable()
 export class ConditionsService {
-  constructor(private readonly drnaService: DrnaService) {}
+  constructor(@Inject(DATABASE) private readonly db: Knex) {}
 
   async getWaterQuality(
     beachId: string,
   ): Promise<WaterQualityResponseDto> {
-    const waterQuality = await this.drnaService.getWaterQuality();
+    const beach = await this.db('beaches')
+      .where({ id: beachId })
+      .first('id');
 
-    if (!waterQuality) {
+    if (!beach) {
+      throw new NotFoundException(
+        `Beach with identifier "${beachId}" was not found`,
+      );
+    }
+
+    const observation = await this.db('water_quality_observations')
+      .where({ beach_id: beach.id })
+      .orderBy('sampled_at', 'desc')
+      .orderBy('retrieved_at', 'desc')
+      .first(
+        'status',
+        'sampled_at',
+        'retrieved_at',
+        'source_url',
+      );
+
+    if (!observation) {
       return {
         status: 'unknown',
         source: 'DRNA',
@@ -22,12 +42,16 @@ export class ConditionsService {
     }
 
     return {
-      status: waterQuality.status,
-      source: waterQuality.source.sourceName,
-      sourceUrl: waterQuality.source.sourceUrl,
-      observedAt: waterQuality.source.observedAt,
-      retrievedAt: waterQuality.source.retrievedAt,
+      status: observation.status,
+      source: 'DRNA',
+      sourceUrl: observation.source_url,
+      observedAt: toIsoString(observation.sampled_at),
+      retrievedAt: toIsoString(observation.retrieved_at),
       availability: 'available',
     };
   }
+}
+
+function toIsoString(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : value;
 }
