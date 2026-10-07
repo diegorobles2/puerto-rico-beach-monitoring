@@ -20,7 +20,7 @@ describe('WaterQualityCard', () => {
     expect(screen.getByRole('heading', { name: /water quality/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Suitable/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/DRNA/i)).toBeInTheDocument();
-    expect(screen.getByText(/2026-10-04/i)).toBeInTheDocument();
+    expect(screen.getAllByText('2026-10-04').length).toBeGreaterThan(0);
     expect(screen.getByText(/Source/i)).toBeInTheDocument();
   });
 

@@ -8,6 +8,7 @@ const statusLabels: Record<WaterQualityStatus, string> = {
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return 'No timestamp available';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Timestamp unavailable';
   return new Intl.DateTimeFormat('en-US', {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BeachDetails } from '../components/beach/BeachDetails';
+import { BeachMap } from '../components/map/BeachMap';
 import { OceanRiskCard } from '../components/status/OceanRiskCard';
 import { WaterQualityCard } from '../components/status/WaterQualityCard';
 import { getBeachConditions, getBeaches } from '../services/beachApi';
@@ -7,7 +8,7 @@ import type { Beach, WaterQualityCondition } from '../types';
 
 export function BeachPage() {
   const [beaches, setBeaches] = useState<Beach[]>([]);
-  const [selectedBeachId, setSelectedBeachId] = useState<number | string>('1');
+  const [selectedBeachId, setSelectedBeachId] = useState<number | string | null>(null);
   const [beach, setBeach] = useState<Beach | null>(null);
   const [condition, setCondition] = useState<WaterQualityCondition | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,10 +21,12 @@ export function BeachPage() {
         setBeaches(items);
         if (items.length > 0) {
           setSelectedBeachId(items[0].id);
-          setBeach(items[0]);
+        } else {
+          setLoading(false);
         }
       } catch {
         setError('Unable to load beaches');
+        setLoading(false);
       }
     }
 
@@ -31,24 +34,30 @@ export function BeachPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedBeachId) return;
+    if (selectedBeachId == null) return;
+
+    const beachId = selectedBeachId;
+    const controller = new AbortController();
 
     async function loadConditions() {
       setLoading(true);
       setError(null);
 
       try {
-        const nextCondition = await getBeachConditions(selectedBeachId);
+        const nextCondition = await getBeachConditions(beachId, controller.signal);
         setCondition(nextCondition);
       } catch {
+        if (controller.signal.aborted) return;
         setError('Unable to load water-quality conditions');
         setCondition(null);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     void loadConditions();
+
+    return () => controller.abort();
   }, [selectedBeachId]);
 
   useEffect(() => {
@@ -81,20 +90,13 @@ export function BeachPage() {
         </label>
       ) : null}
 
+      <BeachMap beaches={beaches} selectedBeachId={selectedBeachId} onSelect={setSelectedBeachId} />
+
       {beach ? <BeachDetails beach={beach} /> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <WaterQualityCard condition={condition} loading={loading} error={error} />
-        <OceanRiskCard condition={{
-          risk: 'moderate',
-          summary: 'Surf and currents may be active; swim with caution.',
-          source: {
-            sourceName: 'NWS',
-            sourceUrl: 'https://www.weather.gov/',
-            observedAt: condition?.observedAt ?? null,
-            retrievedAt: condition?.retrievedAt ?? null,
-          },
-        }} />
+        <OceanRiskCard />
       </div>
     </main>
   );
