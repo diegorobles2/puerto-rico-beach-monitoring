@@ -27,6 +27,11 @@ export class ConditionsService {
         'sampled_at',
         'retrieved_at',
         'source_url',
+        'enterococcus_value',
+        'enterococcus_qualifier',
+        'sampling_type',
+        'temperature_celsius',
+        'ph',
       );
 
     if (!observation) {
@@ -46,8 +51,19 @@ export class ConditionsService {
       observedAt: toIsoDate(observation.sampled_at),
       retrievedAt: toIsoString(observation.retrieved_at),
       availability: 'available',
+      enterococcusValue: numberOrNull(observation.enterococcus_value),
+      enterococcusQualifier: observation.enterococcus_qualifier,
+      samplingType: observation.sampling_type,
+      temperatureCelsius: numberOrNull(observation.temperature_celsius),
+      ph: numberOrNull(observation.ph),
     };
   }
+}
+
+function numberOrNull(value: number | string | null): number | null {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function toIsoString(value: Date | string): string {

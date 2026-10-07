@@ -18,6 +18,9 @@ function fixtureRecord(line: number): DrnaMonitoringRecord {
     date: record.date,
     beachId: record.beach_id,
     beachName: record.beach_name,
+    latitude: record.latitude,
+    longitude: record.longitude,
+    samplingRoute: record.sampling_route,
     samplingType: record.sampling_type,
     enterococcus: record.enterococcus,
     temperatureCelsius: record.temperature_c,
@@ -54,6 +57,13 @@ describe('mapDrnaWaterQuality', () => {
 
   it('maps a value above the BAV to an advisory', () => {
     expect(map({ ...fixtureRecord(1), enterococcus: '71' }).status).toBe('advisory');
+  });
+
+  it('preserves a greater-than value and treats it as an advisory', () => {
+    expect(map({ ...fixtureRecord(1), enterococcus: '>24,196' })).toMatchObject({
+      status: 'advisory',
+      enterococcus: { value: 24196, qualifier: 'greater-than' },
+    });
   });
 
   it('represents missing identity and observation time explicitly', () => {

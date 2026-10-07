@@ -96,6 +96,29 @@ export function WaterQualityCard({
             : 'No current water-quality reading is available.'}
       </p>
 
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-lg bg-sky-50 p-3">
+          <dt className="text-xs font-semibold uppercase text-slate-500">Enterococcus</dt>
+          <dd className="mt-1 font-semibold text-slate-900">
+            {condition.enterococcusValue == null
+              ? 'Not reported'
+              : `${condition.enterococcusQualifier === 'less-than' ? '<' : condition.enterococcusQualifier === 'greater-than' ? '>' : ''}${condition.enterococcusValue.toLocaleString()} colonies/100 mL`}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-slate-50 p-3">
+          <dt className="text-xs font-semibold uppercase text-slate-500">Sample type</dt>
+          <dd className="mt-1 capitalize text-slate-900">{condition.samplingType ?? 'Not reported'}</dd>
+        </div>
+        <div className="rounded-lg bg-slate-50 p-3">
+          <dt className="text-xs font-semibold uppercase text-slate-500">Water temperature</dt>
+          <dd className="mt-1 text-slate-900">{condition.temperatureCelsius == null ? 'Not reported' : `${condition.temperatureCelsius}°C`}</dd>
+        </div>
+        <div className="rounded-lg bg-slate-50 p-3">
+          <dt className="text-xs font-semibold uppercase text-slate-500">pH</dt>
+          <dd className="mt-1 text-slate-900">{condition.ph ?? 'Not reported'}</dd>
+        </div>
+      </dl>
+
       <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Source</p>
         <p className="mt-1 text-sm text-slate-700">{sourceName}</p>

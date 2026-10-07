@@ -23,6 +23,11 @@ export interface WaterQualityCondition {
   observedAt: string | null;
   retrievedAt: string | null;
   availability: WaterQualityAvailability;
+  enterococcusValue?: number | null;
+  enterococcusQualifier?: 'less-than' | 'greater-than' | null;
+  samplingType?: 'routine' | 'resampling' | 'unknown' | null;
+  temperatureCelsius?: number | null;
+  ph?: number | null;
 }
 
 export type OceanRisk = 'low' | 'moderate' | 'high' | 'extreme' | 'unknown';
