@@ -10,6 +10,11 @@ describe('ConditionsService', () => {
         sampled_at: new Date(2026, 9, 4),
         retrieved_at: new Date('2026-10-04T12:30:00.000Z'),
         source_url: 'https://www.drna.pr.gov/',
+        enterococcus_value: 20,
+        enterococcus_qualifier: 'less-than',
+        sampling_type: 'routine',
+        temperature_celsius: '29.2',
+        ph: '8.04',
       },
     );
 
@@ -24,6 +29,11 @@ describe('ConditionsService', () => {
       observedAt: '2026-10-04',
       retrievedAt: '2026-10-04T12:30:00.000Z',
       availability: 'available',
+      enterococcusValue: 20,
+      enterococcusQualifier: 'less-than',
+      samplingType: 'routine',
+      temperatureCelsius: 29.2,
+      ph: 8.04,
     });
   });
 
@@ -60,6 +70,11 @@ function createDbMock(
         sampled_at: Date | string;
         retrieved_at: Date | string;
         source_url: string;
+        enterococcus_value: number | null;
+        enterococcus_qualifier: 'less-than' | 'greater-than' | null;
+        sampling_type: 'routine' | 'resampling' | 'unknown';
+        temperature_celsius: number | string | null;
+        ph: number | string | null;
       }
     | undefined,
 ) {

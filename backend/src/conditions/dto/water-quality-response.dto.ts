@@ -46,4 +46,19 @@ export class WaterQualityResponseDto {
       'Whether normalized water-quality information is currently available.',
   })
   availability!: WaterQualityAvailability;
+
+  @ApiPropertyOptional({ example: 20, nullable: true, description: 'Enterococcus count in colonies per 100 mL.' })
+  enterococcusValue?: number | null;
+
+  @ApiPropertyOptional({ example: 'less-than', nullable: true, enum: ['less-than', 'greater-than'] })
+  enterococcusQualifier?: 'less-than' | 'greater-than' | null;
+
+  @ApiPropertyOptional({ example: 'routine', nullable: true, enum: ['routine', 'resampling', 'unknown'] })
+  samplingType?: 'routine' | 'resampling' | 'unknown' | null;
+
+  @ApiPropertyOptional({ example: 29.2, nullable: true })
+  temperatureCelsius?: number | null;
+
+  @ApiPropertyOptional({ example: 8.04, nullable: true })
+  ph?: number | null;
 }
