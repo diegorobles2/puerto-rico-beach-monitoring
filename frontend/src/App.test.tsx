@@ -11,5 +11,6 @@ describe('App', () => {
   it('renders the project heading', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: /Puerto Rico Beach Monitoring/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('Beach map')).toBeInTheDocument();
   });
 });
