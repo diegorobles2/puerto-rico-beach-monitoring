@@ -8,7 +8,7 @@ export interface WaterQualityObservation {
   sampleType: 'routine' | 'resampling' | 'unknown';
   enterococcus: {
     value: number | null;
-    qualifier: 'less-than' | null;
+    qualifier: 'less-than' | 'greater-than' | null;
     unit: 'colonies/100 mL';
   };
   temperatureCelsius: number | null;

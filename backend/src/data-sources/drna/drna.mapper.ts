@@ -24,22 +24,23 @@ export function mapDrnaWaterQuality({ record, sourceUrl, retrievedAt }: DrnaMapp
   };
 }
 
-function parseEnterococcus(raw: string | null): { value: number | null; qualifier: 'less-than' | null } {
+function parseEnterococcus(raw: string | null): Omit<WaterQualityObservation['enterococcus'], 'unit'> {
   const value = raw?.trim();
   if (!value) return { value: null, qualifier: null };
 
-  const match = /^(<)?\s*([\d,]+(?:\.\d+)?)$/.exec(value);
+  const match = /^([<>])?\s*([\d,]+(?:\.\d+)?)$/.exec(value);
   if (!match) return { value: null, qualifier: null };
 
   return {
     value: Number(match[2].replaceAll(',', '')),
-    qualifier: match[1] ? 'less-than' : null,
+    qualifier: match[1] === '<' ? 'less-than' : match[1] === '>' ? 'greater-than' : null,
   };
 }
 
-function getStatus(value: number | null, qualifier: 'less-than' | null): WaterQualityStatus {
+function getStatus(value: number | null, qualifier: WaterQualityObservation['enterococcus']['qualifier']): WaterQualityStatus {
   if (value === null) return 'unknown';
   if (qualifier === 'less-than' && value > BEACH_ACTION_VALUE) return 'unknown';
+  if (qualifier === 'greater-than') return value >= BEACH_ACTION_VALUE ? 'advisory' : 'unknown';
   return value > BEACH_ACTION_VALUE ? 'advisory' : 'suitable';
 }
 

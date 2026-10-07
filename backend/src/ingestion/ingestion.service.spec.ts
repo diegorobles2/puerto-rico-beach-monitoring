@@ -33,15 +33,26 @@ describeDatabase('IngestionService database integration', () => {
 
   afterAll(async () => db.destroy());
 
-  it('persists a normalized result once when processed twice', async () => {
+  it('updates a corrected batch without creating duplicates', async () => {
     await expectRollback(
       db.transaction(async (trx) => {
         const service = makeService(trx, observation);
         await service.refresh();
-        await service.refresh();
+        await makeService(trx, {
+          ...observation,
+          status: 'suitable',
+          enterococcus: { ...observation.enterococcus, value: 20 },
+          temperatureCelsius: 28.4,
+          ph: 8.05,
+          source: { ...observation.source, retrievedAt: '2099-09-26T14:39:00.000Z' },
+        }).refresh();
 
         const [{ count }] = await trx('water_quality_observations').where({ source_url: TEST_SOURCE_URL }).count();
-        expect(Number(count)).toBe(1);
+        expect(Number(count)).toBe(2);
+        const rows = await trx('water_quality_observations').where({ source_url: TEST_SOURCE_URL });
+        expect(rows).toEqual(expect.arrayContaining([
+          expect.objectContaining({ enterococcus_value: 20, status: 'suitable', temperature_celsius: '28.4', ph: '8.05' }),
+        ]));
         throw ROLLBACK;
       }),
     );
@@ -64,10 +75,27 @@ describeDatabase('IngestionService database integration', () => {
       }),
     );
   });
+
+  it('rejects suspicious parser loss before changing the database', async () => {
+    await expectRollback(db.transaction(async (trx) => {
+      await trx('beaches').insert({ drna_station_id: 'RW-22', name: 'Unchanged', municipality: 'Aguada' })
+        .onConflict('drna_station_id').merge({ name: 'Unchanged' });
+      await expect(makeService(trx, observation, { rejectedRows: 3, sourceRows: 100 }).refresh())
+        .rejects.toThrow('rejected 3 of 100 rows');
+      expect(await trx('beaches').where({ drna_station_id: 'RW-22' }).first('name')).toEqual({ name: 'Unchanged' });
+      throw ROLLBACK;
+    }));
+  });
 });
 
-function makeService(db: Knex, result: WaterQualityObservation): IngestionService {
-  const drna = { getWaterQuality: jest.fn().mockResolvedValue(result) } as unknown as DrnaService;
+function makeService(db: Knex, result: WaterQualityObservation, quality = { rejectedRows: 0, sourceRows: 35 }): IngestionService {
+  const drna = { getCatalog: jest.fn().mockResolvedValue({
+    stations: [
+      { stationId: 'RW-22', name: 'Pico de Piedra', municipality: 'Aguada', latitude: 18.3843639, longitude: -67.2129889 },
+      { stationId: 'RW-23', name: 'Puerto Nuevo', municipality: 'Vega Baja', latitude: 18.4913667, longitude: -66.3990444 },
+    ],
+    observations: [result, { ...result, stationId: 'RW-23' }], ...quality,
+  }) } as unknown as DrnaService;
   return new IngestionService(drna, db);
 }
 

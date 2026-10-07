@@ -7,6 +7,7 @@
     "db:migrate": "knex migrate:latest --knexfile knexfile.ts",
     "db:rollback": "knex migrate:rollback --knexfile knexfile.ts",
     "db:verify": "ts-node src/database/verify-schema.ts",
+    "ingest": "ts-node src/ingestion/run-ingestion.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "test": "jest"
