@@ -1,0 +1,33 @@
+Date 	Beach ID 	Beach Name 	Longitude 	Sampling Route 	Sampling Type 	Enterococcus
+(colonies/100 mL)
+Temperature
+(°C) pH 	Observations
+9-Jan-2023 	RW-34 	Playa Cabullón 	-66.6027278 	Route 3: Lajas - Salinas 	Routine 	10 	27.5 	8.19
+Beach Monitoring and Public Notification Program	G O B I E R N O 	D E 	P U E R T O
+R I C O
+Departamento de Recursos Naturales y
+Ambientales
+
+-- 1 of 55 --
+14-Sep-2026 	RW-18 	Balneario Manuel “Nolo”
+Morales or Sardinera -66.2808917 	Route 1: Dorado - Loíza 	re-sampling 	30 	28.70 	re-sampling
+14-Sep-2026 	RW-25A 	Playa Sixto Escobar 	-66.0866667 	Route 1: Dorado - Loíza 	re-sampling 	<10 	29.30 	re-sampling
+
+-- 54 of 55 --
+21-Sep-2026 	RW-18 	Balneario Manuel “Nolo”
+Morales or Sardinera -66.2808917 	Route 1: Dorado - Loíza 	Routine
+21-Sep-2026 	RW-25A 	Playa Sixto Escobar 	-66.0866667 	Route 1: Dorado - Loíza 	Routine
+21-Sep-2026 	RW-12B 	Playa el Combate 	-67.2129056 	Route 4: Cabo Rojo 	Routine 	30.9 	8.17
+21-Sep-2026 	RW-15 	Balneario de Añasco or
+Balneario Tres Hermanos -67.1939222 Route 5: Añasco - Aguadilla 	Routine 	<10 29.2 	8.04
+21-Sep-2026 	RW-22 	Pico de Piedra 	-67.2129889 Route 5: Añasco - Aguadilla 	Routine 	231 	29 	8.19
+21-Sep-2026 	RW-16 	Balneario Crash Boat 	-67.1637778 Route 5: Añasco - Aguadilla 	Routine 	10 	29.7 	8.22
+21-Sep-2026 	RW-17 	Balneario Cerro Gordo or Javier
+Calderón Nieves -66.0824083 Route: 6: Arecibo – Vega Alta 	Routine
+No se completó evento de muestras debido a que el laboratorio no tenía los medios
+para analizar las muestras
+No se completó evento de muestras debido a que el laboratorio no tenía los medios
+para analizar las muestras
+
+-- 55 of 55 --
+

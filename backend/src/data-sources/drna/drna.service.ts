@@ -156,7 +156,7 @@ export function parseMonitoringRecords(text: string): { records: DrnaMonitoringR
   const rows: string[] = [];
   for (const line of lines) {
     if (/^(?:\d{4}-\d{2}-\d{2}|\d{1,2}-[A-Za-z]{3}-\d{4})[|\s]+RW-/i.test(line)) rows.push(line);
-    else if (rows.length && !/^--|^Beach Monitoring|^Departamento/i.test(line)) rows[rows.length - 1] += ` ${line}`;
+    else if (rows.length && !/^--|^Beach Monitoring|^Departamento|^R I C O$|^Ambientales$/i.test(line)) rows[rows.length - 1] += ` ${line}`;
   }
 
   const records: DrnaMonitoringRecord[] = [];
@@ -175,9 +175,9 @@ function parsePipeRow(row: string): DrnaMonitoringRecord | null {
 }
 
 function parsePdfRow(row: string): DrnaMonitoringRecord | null {
-  const match = /^(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(RW-[\w-]+)\s+(.+?)\s+(?:(1\d\.\d+)\s+)?(-6\d\.\d+)\s+(Route.*?)(Routine|Re-Sampling|re-sampling)\s*([<>]?\s*[\d,]+)?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*(.*)$/i.exec(row);
+  const match = /^(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(RW-[\w-]+)\s+(.+?)\s+(?:(1\d\.\d+)\s+)?(-6\d\.\d+)\s+(Route.*?)(Routine|Re-Sampling|re-sampling)\s*([<>]?\s*[\d,]+(?![\d.]))?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*(.*)$/i.exec(row);
   if (match) return { date: match[1], beachId: match[2], beachName: match[3].trim(), latitude: match[4] ?? null, longitude: match[5], samplingRoute: match[6].trim(), samplingType: match[7], enterococcus: match[8]?.replace(/\s+/g, '') ?? null, temperatureCelsius: match[9] ?? null, ph: match[10] ?? null, observations: match[11] || null };
-  const withoutCoordinates = /^(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(RW-[\w-]+)\s+(.+?)\s+(?:(Route.*?))?(Routine|Re-Sampling|re-sampling)\s*([<>]?\s*[\d,]+)?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*(.*)$/i.exec(row);
+  const withoutCoordinates = /^(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(RW-[\w-]+)\s+(.+?)\s+(?:(Route.*?))?(Routine|Re-Sampling|re-sampling)\s*([<>]?\s*[\d,]+(?![\d.]))?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*(.*)$/i.exec(row);
   return withoutCoordinates ? { date: withoutCoordinates[1], beachId: withoutCoordinates[2], beachName: withoutCoordinates[3].trim(), latitude: null, longitude: null, samplingRoute: withoutCoordinates[4]?.trim() ?? null, samplingType: withoutCoordinates[5], enterococcus: withoutCoordinates[6]?.replace(/\s+/g, '') ?? null, temperatureCelsius: withoutCoordinates[7] ?? null, ph: withoutCoordinates[8] ?? null, observations: withoutCoordinates[9] || null } : null;
 }
 

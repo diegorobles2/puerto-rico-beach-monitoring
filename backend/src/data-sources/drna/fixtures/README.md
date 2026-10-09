@@ -9,6 +9,7 @@ Retrieved: October 3, 2026.
 - `notification-advisory.html`: notification with one station above the Beach Action Value.
 - `notification-all-clear.html`: notification stating that monitored beaches were suitable for bathers.
 - `monitoring-results-extracted.txt`: representative rows from a detailed results attachment, including a numeric result, a qualified `<10` result, and a resampling row with missing fields.
+- `monitoring-results-pdf-text.txt`: lines copied unchanged from the text `pdf-parse` extracts from the September 25, 2026 results PDF (retrieved October 7, 2026). Covers page headers, wrapped beach names, resampling rows, rows the laboratory could not analyze, and a row with temperature and pH but no Enterococcus result.
 
 ## Sources
 
@@ -19,6 +20,6 @@ Retrieved: October 3, 2026.
 
 ## Fixture policy
 
-The HTML files retain only the semantic content needed by tests rather than the DRNA site's theme, navigation, scripts, or tracking markup. The text fixture uses pipe-separated columns to preserve values extracted from the PDF while making page-layout irregularities explicit.
+The HTML files retain only the semantic content needed by tests rather than the DRNA site's theme, navigation, scripts, or tracking markup. The `monitoring-results-extracted.txt` fixture uses pipe-separated columns to preserve values extracted from the PDF while making page-layout irregularities explicit. `monitoring-results-pdf-text.txt` keeps the extractor output as-is, including tabs and trailing spaces, so that it exercises the parser path used in production.
 
 When DRNA changes its publication format, add a new fixture rather than silently rewriting an existing fixture that represents a previously observed format.
