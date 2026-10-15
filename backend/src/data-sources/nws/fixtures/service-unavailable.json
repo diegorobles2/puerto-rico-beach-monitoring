@@ -1,0 +1,8 @@
+{
+  "correlationId": "fixture-correlation-id",
+  "title": "Service Unavailable",
+  "type": "https://api.weather.gov/problems/ServiceUnavailable",
+  "status": 503,
+  "detail": "The upstream service is temporarily unavailable.",
+  "instance": "https://api.weather.gov/requests/fixture-request-id"
+}
