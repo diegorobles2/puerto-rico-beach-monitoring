@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import type { BeachAlert, OceanCondition } from '../../types/domain';
 import { mapNwsAlerts, mapNwsCondition } from './nws.mapper';
-import type { NwsAlertCollection, NwsProductIndex, NwsProductReference, NwsSurfForecastProduct } from './nws.types';
+import type { NwsAlertCollection, NwsPointResponse, NwsProductIndex, NwsProductReference, NwsSurfForecastProduct } from './nws.types';
 
 const API_URL = 'https://api.weather.gov';
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -42,6 +42,20 @@ export class NwsService {
       throw new Error('NWS active-alert response is malformed');
     }
     return mapNwsAlerts(collection, new Date().toISOString());
+  }
+
+  async getForecastZone(latitude: number, longitude: number): Promise<string> {
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
+      || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error('Invalid coordinates for NWS point lookup');
+    }
+    const point = await this.getJson<NwsPointResponse>(`${API_URL}/points/${latitude},${longitude}`, 'point metadata');
+    const properties = point.properties as { forecastZone?: unknown } | null;
+    const match = typeof properties?.forecastZone === 'string'
+      ? /\/zones\/forecast\/(PRZ\d{3})\/?$/.exec(properties.forecastZone)
+      : null;
+    if (!match) throw new Error('NWS point response has no Puerto Rico forecast zone');
+    return match[1];
   }
 
   private async getJson<T>(url: string, label: string): Promise<T> {

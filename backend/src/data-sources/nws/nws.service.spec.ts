@@ -39,6 +39,20 @@ describe('NwsService', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it('resolves a forecast zone from NWS point metadata', async () => {
+    const fetcher = jest.fn().mockResolvedValue(json({
+      properties: { forecastZone: 'https://api.weather.gov/zones/forecast/PRZ001' },
+    }));
+    await expect(new NwsService(fetcher).getForecastZone(18.3843639, -67.2129889)).resolves.toBe('PRZ001');
+  });
+
+  it('rejects unavailable and malformed point metadata', async () => {
+    await expect(new NwsService(jest.fn().mockResolvedValue(json({}, 404))).getForecastZone(18.4, -67.2))
+      .rejects.toThrow('NWS point metadata returned HTTP 404');
+    await expect(new NwsService(jest.fn().mockResolvedValue(json({ properties: {} }))).getForecastZone(18.4, -67.2))
+      .rejects.toThrow('NWS point response has no Puerto Rico forecast zone');
+  });
+
   it('handles transport, HTTP, malformed JSON, and malformed payload failures explicitly', async () => {
     await expect(new NwsService(jest.fn().mockRejectedValue(new Error('network'))).getActiveAlerts('PRZ007'))
       .rejects.toThrow('Unable to retrieve NWS active alerts');

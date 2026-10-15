@@ -29,3 +29,7 @@ export interface NwsAlertCollection {
   type?: unknown;
   features?: unknown;
 }
+
+export interface NwsPointResponse {
+  properties?: unknown;
+}
