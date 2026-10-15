@@ -16,6 +16,24 @@ export interface WaterQualityObservation {
   notes?: string;
   source: SourceMetadata;
 }
-export interface OceanCondition { risk: 'low' | 'moderate' | 'high' | 'extreme' | 'unknown'; summary: string; source: SourceMetadata; }
-export interface BeachAlert { id: string; title: string; description: string; source: SourceMetadata; }
+export interface OceanCondition {
+  zoneId: string;
+  forecastPeriod: string | null;
+  risk: 'low' | 'moderate' | 'high' | 'extreme' | 'unknown';
+  summary: string;
+  source: SourceMetadata;
+}
+export interface BeachAlert {
+  id: string;
+  title: string;
+  description: string;
+  instruction: string | null;
+  severity: string;
+  certainty: string;
+  urgency: string;
+  effectiveAt: string;
+  expiresAt: string;
+  zones: string[];
+  source: SourceMetadata;
+}
 export interface CommunityReport { id: string; beachId: string; summary: string; createdAt: string; }
