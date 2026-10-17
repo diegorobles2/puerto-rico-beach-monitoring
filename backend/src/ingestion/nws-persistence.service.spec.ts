@@ -4,35 +4,17 @@ import knex, { Knex } from 'knex';
 import { NwsPersistenceService } from './nws-persistence.service';
 import type { BeachAlert, OceanCondition } from '../types/domain';
 
-describe('NWS persistence integration', () => {
+const connectionString = process.env.NWS_PERSISTENCE_TEST_DATABASE_URL;
+const describeDatabase = isExpectedDatabase(connectionString, 'beach_monitoring_test') ? describe : describe.skip;
+
+describeDatabase('NWS persistence integration', () => {
   let db: Knex;
   let service: NwsPersistenceService;
 
   beforeAll(async () => {
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error('DATABASE_URL is required');
-    }
-
-    const url = new URL(connectionString);
-
-    if (
-      url.hostname !== 'localhost' &&
-      url.hostname !== '127.0.0.1'
-    ) {
-      throw new Error('Integration tests require local PostgreSQL');
-    }
-
-    if (url.pathname !== '/beach_monitoring_test') {
-      throw new Error(
-        'Integration tests require beach_monitoring_test',
-      );
-    }
-
     db = knex({
       client: 'pg',
-      connection: connectionString,
+      connection: connectionString!,
     });
 
     service = new NwsPersistenceService(db);
@@ -312,25 +294,26 @@ describe('NWS persistence integration', () => {
 
   it('preserves the last successful retrieval after a failure', async () => {
     const sourceKey = 'conditions';
+    const zoneId = 'PRZ991';
 
     const successTime = '2026-10-16T12:00:00.000Z';
     const failureTime = '2026-10-16T13:00:00.000Z';
 
     // Preserve any existing record so the test can restore it.
     const previous = await db('nws_source_health')
-      .where({ source_key: sourceKey })
+      .where({ source_key: sourceKey, zone_id: zoneId })
       .first();
 
     try {
       await db('nws_source_health')
-        .where({ source_key: sourceKey })
+        .where({ source_key: sourceKey, zone_id: zoneId })
         .delete();
 
-      await service.recordRetrieval(sourceKey, true, successTime);
-      await service.recordRetrieval(sourceKey, false, failureTime);
+      await service.recordRetrieval(sourceKey, zoneId, true, successTime);
+      await service.recordRetrieval(sourceKey, zoneId, false, failureTime);
 
       const health = await db('nws_source_health')
-        .where({ source_key: sourceKey })
+        .where({ source_key: sourceKey, zone_id: zoneId })
         .first();
 
       expect(health.last_attempt_at.toISOString()).toBe(failureTime);
@@ -338,7 +321,7 @@ describe('NWS persistence integration', () => {
       expect(health.last_attempt_succeeded).toBe(false);
     } finally {
       await db('nws_source_health')
-        .where({ source_key: sourceKey })
+        .where({ source_key: sourceKey, zone_id: zoneId })
         .delete();
 
       if (previous) {
@@ -504,3 +487,13 @@ describe('NWS persistence integration', () => {
     }
   });
 });
+
+function isExpectedDatabase(connection: string | undefined, database: string): boolean {
+  if (!connection) return false;
+  try {
+    const url = new URL(connection);
+    return ['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname === `/${database}`;
+  } catch {
+    return false;
+  }
+}

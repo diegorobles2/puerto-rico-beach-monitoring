@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { NwsService } from '../data-sources/nws/nws.service';
 import { NwsPersistenceService } from './nws-persistence.service';
@@ -20,12 +19,14 @@ export class NwsIngestionService {
 
       await this.persistence.recordRetrieval(
         'conditions',
+        zoneId,
         true,
         attemptedAt,
       );
     } catch (error) {
       await this.persistence.recordRetrieval(
         'conditions',
+        zoneId,
         false,
         attemptedAt,
       );
@@ -48,17 +49,35 @@ export class NwsIngestionService {
 
       await this.persistence.recordRetrieval(
         'alerts',
+        zoneId,
         true,
         attemptedAt,
       );
     } catch (error) {
       await this.persistence.recordRetrieval(
         'alerts',
+        zoneId,
         false,
         attemptedAt,
       );
 
       throw error;
     }
+  }
+
+  async refreshZones(zoneIds: string[]): Promise<{ attempted: number; failed: number }> {
+    let attempted = 0;
+    let failed = 0;
+    for (const zoneId of new Set(zoneIds)) {
+      for (const refresh of [this.refreshConditions.bind(this), this.refreshAlerts.bind(this)]) {
+        attempted++;
+        try {
+          await refresh(zoneId);
+        } catch {
+          failed++;
+        }
+      }
+    }
+    return { attempted, failed };
   }
 }

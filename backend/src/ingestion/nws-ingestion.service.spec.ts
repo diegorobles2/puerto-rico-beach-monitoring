@@ -41,6 +41,7 @@ describe('NwsIngestionService', () => {
 
     expect(persistence.recordRetrieval).toHaveBeenCalledWith(
       'conditions',
+      'PRZ001',
       false,
       expect.any(String),
     );
@@ -59,6 +60,7 @@ describe('NwsIngestionService', () => {
 
     expect(persistence.recordRetrieval).toHaveBeenCalledWith(
       'alerts',
+      'PRZ001',
       false,
       expect.any(String),
     );
@@ -95,14 +97,26 @@ describe('NwsIngestionService', () => {
 
     expect(persistence.recordRetrieval).toHaveBeenCalledWith(
       'conditions',
+      'PRZ001',
       false,
       expect.any(String),
     );
 
     expect(persistence.recordRetrieval).not.toHaveBeenCalledWith(
       'conditions',
+      'PRZ001',
       true,
       expect.any(String),
     );
+  });
+
+  it('refreshes both sources once per distinct mapped zone and continues after failures', async () => {
+    const conditions = jest.spyOn(service, 'refreshConditions').mockRejectedValue(new Error('unavailable'));
+    const alerts = jest.spyOn(service, 'refreshAlerts').mockResolvedValue(undefined);
+
+    await expect(service.refreshZones(['PRZ001', 'PRZ001', 'PRZ002']))
+      .resolves.toEqual({ attempted: 4, failed: 2 });
+    expect(conditions).toHaveBeenCalledTimes(2);
+    expect(alerts).toHaveBeenCalledTimes(2);
   });
 });

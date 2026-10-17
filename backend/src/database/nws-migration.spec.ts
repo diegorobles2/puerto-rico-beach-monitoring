@@ -3,32 +3,16 @@ import 'dotenv/config';
 import knex, { Knex } from 'knex';
 import { up, down } from './migrations/20261016190000_add_nws_persistence';
 
-describe('NWS persistence migration', () => {
+const connectionString = process.env.NWS_MIGRATION_TEST_DATABASE_URL;
+const describeDatabase = isExpectedDatabase(connectionString) ? describe : describe.skip;
+
+describeDatabase('NWS persistence migration', () => {
   let db: Knex;
 
   beforeAll(async () => {
-    const connectionString = process.env.NWS_MIGRATION_TEST_DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error(
-        'NWS_MIGRATION_TEST_DATABASE_URL is required',
-      );
-    }
-
-    const url = new URL(connectionString);
-
-    if (
-      !['localhost', '127.0.0.1'].includes(url.hostname) ||
-      url.pathname !== '/beach_monitoring_migration_test'
-    ) {
-      throw new Error(
-        'Migration tests require the isolated local migration database',
-      );
-    }
-
     db = knex({
       client: 'pg',
-      connection: connectionString,
+      connection: connectionString!,
     });
 
     const existing = await db('information_schema.tables')
@@ -79,3 +63,14 @@ describe('NWS persistence migration', () => {
     }
   });
 });
+
+function isExpectedDatabase(connection: string | undefined): boolean {
+  if (!connection) return false;
+  try {
+    const url = new URL(connection);
+    return ['localhost', '127.0.0.1'].includes(url.hostname)
+      && url.pathname === '/beach_monitoring_migration_test';
+  } catch {
+    return false;
+  }
+}

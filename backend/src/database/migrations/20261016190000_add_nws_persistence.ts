@@ -1,4 +1,3 @@
-
 import type { Knex } from 'knex';
 
 export async function up(knex: Knex): Promise<void> {
@@ -62,14 +61,17 @@ export async function up(knex: Knex): Promise<void> {
     from anon, authenticated;
 
     create table public.nws_source_health (
-      source_key text primary key,
+      source_key text not null,
+      zone_id text not null,
       last_attempt_at timestamptz,
       last_success_at timestamptz,
       last_attempt_succeeded boolean,
-      last_error text,
       updated_at timestamptz not null default now(),
+      primary key (source_key, zone_id),
       constraint nws_source_health_key_check
-        check (source_key in ('conditions', 'alerts'))
+        check (source_key in ('conditions', 'alerts')),
+      constraint nws_source_health_zone_check
+        check (zone_id ~ '^PRZ[0-9]{3}$')
     );
 
     create index nws_alert_zones_zone_idx

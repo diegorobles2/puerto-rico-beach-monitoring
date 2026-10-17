@@ -1,4 +1,3 @@
-
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { DATABASE } from '../database/database.module';
@@ -131,18 +130,20 @@ export class NwsPersistenceService {
 
   async recordRetrieval(
     sourceKey: 'conditions' | 'alerts',
+    zoneId: string,
     succeeded: boolean,
     attemptedAt: string,
   ): Promise<void> {
     await this.db('nws_source_health')
       .insert({
         source_key: sourceKey,
+        zone_id: zoneId,
         last_attempt_at: attemptedAt,
         last_success_at: succeeded ? attemptedAt : null,
         last_attempt_succeeded: succeeded,
       })
 
-      .onConflict('source_key')
+      .onConflict(['source_key', 'zone_id'])
       .merge({
         last_attempt_at: this.db.raw(`
           greatest(

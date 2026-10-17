@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { DataSourcesModule } from '../data-sources/data-sources.module';
 import { IngestionScheduler } from './ingestion.scheduler';
@@ -16,6 +15,5 @@ import { NwsIngestionService } from './nws-ingestion.service';
     NwsPersistenceService,
     NwsIngestionService,
   ],
-  exports: [NwsPersistenceService],
 })
 export class IngestionModule {}
