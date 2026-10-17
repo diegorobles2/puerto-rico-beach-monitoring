@@ -8,6 +8,7 @@
     "db:rollback": "knex migrate:rollback --knexfile knexfile.ts",
     "db:verify": "ts-node src/database/verify-schema.ts",
     "ingest": "ts-node src/ingestion/run-ingestion.ts",
+    "ingest:nws": "ts-node src/ingestion/run-nws-ingestion.ts",
     "map:nws": "ts-node src/ingestion/run-nws-mapping.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
