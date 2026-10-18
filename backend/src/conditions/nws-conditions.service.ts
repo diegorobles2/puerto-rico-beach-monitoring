@@ -68,6 +68,7 @@ export class NwsConditionsService {
     }
 
     const stale =
+      await this.latestAttemptFailed('conditions', zoneId, retrievedAt) ||
       isOlderThan(retrievedAt, OCEAN_RISK_RETRIEVAL_STALE_AFTER_MS) ||
       isOlderThan(observedAt, OCEAN_RISK_ISSUANCE_STALE_AFTER_MS);
 
@@ -146,10 +147,8 @@ export class NwsConditionsService {
 
     const alerts = rows.map(toAlertDto);
     const retrievedAt = toIsoStringOrNull(snapshot.retrieved_at)!;
-    const availability: NwsAvailability = isOlderThan(
-      retrievedAt,
-      ALERTS_STALE_AFTER_MS,
-    )
+    const availability: NwsAvailability = await this.latestAttemptFailed('alerts', zoneId, retrievedAt)
+      || isOlderThan(retrievedAt, ALERTS_STALE_AFTER_MS)
       ? 'stale'
       : 'available';
 
@@ -181,6 +180,20 @@ export class NwsConditionsService {
     }
 
     return beach.nws_forecast_zone ?? null;
+  }
+
+  private async latestAttemptFailed(
+    sourceKey: 'conditions' | 'alerts',
+    zoneId: string,
+    retrievedAt: string,
+  ): Promise<boolean> {
+    const health = await this.db('nws_source_health')
+      .where({ source_key: sourceKey, zone_id: zoneId })
+      .first('last_attempt_at', 'last_attempt_succeeded');
+    const attemptedAt = toIsoStringOrNull(health?.last_attempt_at);
+    return health?.last_attempt_succeeded === false
+      && attemptedAt !== null
+      && attemptedAt >= retrievedAt;
   }
 }
 

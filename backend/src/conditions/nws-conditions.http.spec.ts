@@ -13,6 +13,7 @@ interface Rows {
   beach?: { id: number; nws_forecast_zone: string | null };
   condition?: Record<string, unknown>;
   snapshot?: { retrieved_at: Date };
+  health?: { last_attempt_at: Date; last_attempt_succeeded: boolean };
   alerts?: Record<string, unknown>[];
 }
 
@@ -25,7 +26,8 @@ function createDb(rows: Rows) {
       first: jest.fn(async () =>
         table === 'beaches' ? rows.beach
           : table === 'nws_conditions' ? rows.condition
-            : rows.snapshot),
+            : table === 'nws_alert_snapshots' ? rows.snapshot
+              : rows.health),
       select: jest.fn(async () => rows.alerts ?? []),
     };
     return query;

@@ -20,6 +20,7 @@ interface Tables {
   beach?: { id: number; nws_forecast_zone: string | null };
   condition?: Record<string, unknown>;
   snapshot?: { retrieved_at: Date | string };
+  health?: { last_attempt_at: Date | string; last_attempt_succeeded: boolean };
   alerts?: Record<string, unknown>[];
 }
 
@@ -41,6 +42,7 @@ function createNwsDbMock(tables: Tables) {
         if (table === 'beaches') return tables.beach;
         if (table === 'nws_conditions') return tables.condition;
         if (table === 'nws_alert_snapshots') return tables.snapshot;
+        if (table === 'nws_source_health') return tables.health;
         throw new Error(`Unexpected first() on ${table}`);
       }),
       select: jest.fn(async () => {
@@ -189,6 +191,21 @@ describe('NwsConditionsService', () => {
       });
       expect(result.unavailableReason).toBeUndefined();
     });
+
+    it('marks a fresh stored risk as stale after a newer failed refresh', async () => {
+      const row = conditionRow({ risk: 'low' });
+      const service = new NwsConditionsService(createNwsDbMock({
+        beach: MAPPED_BEACH,
+        condition: row,
+        health: { last_attempt_at: new Date(), last_attempt_succeeded: false },
+      }) as never);
+
+      await expect(service.getOceanRisk(7)).resolves.toMatchObject({
+        status: 'unknown',
+        lastKnownStatus: 'low',
+        availability: 'stale',
+      });
+    });
   });
 
   describe('getAlerts', () => {
@@ -262,6 +279,21 @@ describe('NwsConditionsService', () => {
           alerts: [],
         }) as never,
       );
+
+      await expect(service.getAlerts(7)).resolves.toMatchObject({
+        status: 'unknown',
+        availability: 'stale',
+        alerts: [],
+      });
+    });
+
+    it('does not report no alerts after a newer failed refresh', async () => {
+      const service = new NwsConditionsService(createNwsDbMock({
+        beach: MAPPED_BEACH,
+        snapshot: { retrieved_at: ago(5 * MINUTE_MS) },
+        health: { last_attempt_at: new Date(), last_attempt_succeeded: false },
+        alerts: [],
+      }) as never);
 
       await expect(service.getAlerts(7)).resolves.toMatchObject({
         status: 'unknown',
