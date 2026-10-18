@@ -4,6 +4,7 @@ import request = require('supertest');
 import { DATABASE } from '../database/database.module';
 import { ConditionsController } from './conditions.controller';
 import { ConditionsService } from './conditions.service';
+import { NwsConditionsService } from './nws-conditions.service';
 
 // Shaped like the row IngestionService stores for the RW-22 fixture record of 21-Sep-2026.
 const RW22_OBSERVATION = {
@@ -34,7 +35,7 @@ describe('GET /conditions/:beachId/water-quality', () => {
   async function start(db: ReturnType<typeof createDb>) {
     const module = await Test.createTestingModule({
       controllers: [ConditionsController],
-      providers: [ConditionsService, { provide: DATABASE, useValue: db }],
+      providers: [ConditionsService, NwsConditionsService, { provide: DATABASE, useValue: db }],
     }).compile();
     app = module.createNestApplication();
     await app.init();
