@@ -354,6 +354,8 @@ describeDatabase('NWS persistence integration', () => {
   it('retrieves stored NWS conditions using a beach zone mapping', async () => {
     const zoneId = 'PRZ993';
     const retrievedAt = '2026-10-16T12:00:00.000Z';
+    const observedAt = '2026-10-16T11:45:00.000Z';
+    const sourceUrl = 'https://api.weather.gov/products/srf-persistence-test';
 
     let beachId: string | undefined;
 
@@ -378,8 +380,8 @@ describeDatabase('NWS persistence integration', () => {
         summary: 'High rip current risk',
         source: {
           sourceName: 'NWS',
-          sourceUrl: 'https://www.weather.gov/',
-          observedAt: null,
+          sourceUrl,
+          observedAt,
           retrievedAt,
         },
       });
@@ -394,6 +396,9 @@ describeDatabase('NWS persistence integration', () => {
         forecast_period: 'Today',
         risk: 'high',
         summary: 'High rip current risk',
+        source_url: sourceUrl,
+        observed_at: new Date(observedAt),
+        retrieved_at: new Date(retrievedAt),
       });
     } finally {
       if (beachId) {

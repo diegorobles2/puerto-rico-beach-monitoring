@@ -192,6 +192,38 @@ describe('NwsConditionsService', () => {
       expect(result.unavailableReason).toBeUndefined();
     });
 
+    it('applies the retrieval and issuance freshness limits at their exact boundaries', async () => {
+      const now = new Date('2026-10-18T12:00:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      const atLimit = new NwsConditionsService(createNwsDbMock({
+        beach: MAPPED_BEACH,
+        condition: conditionRow({
+          risk: 'moderate',
+          retrieved_at: new Date(now.getTime() - OCEAN_RISK_RETRIEVAL_STALE_AFTER_MS),
+          observed_at: new Date(now.getTime() - OCEAN_RISK_ISSUANCE_STALE_AFTER_MS),
+        }),
+      }) as never);
+      const pastLimit = new NwsConditionsService(createNwsDbMock({
+        beach: MAPPED_BEACH,
+        condition: conditionRow({
+          risk: 'moderate',
+          retrieved_at: new Date(now.getTime() - OCEAN_RISK_RETRIEVAL_STALE_AFTER_MS - 1),
+          observed_at: new Date(now.getTime() - OCEAN_RISK_ISSUANCE_STALE_AFTER_MS),
+        }),
+      }) as never);
+
+      try {
+        await expect(atLimit.getOceanRisk(7)).resolves.toMatchObject({ status: 'moderate', availability: 'available' });
+        await expect(pastLimit.getOceanRisk(7)).resolves.toMatchObject({
+          status: 'unknown',
+          lastKnownStatus: 'moderate',
+          availability: 'stale',
+        });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('marks a fresh stored risk as stale after a newer failed refresh', async () => {
       const row = conditionRow({ risk: 'low' });
       const service = new NwsConditionsService(createNwsDbMock({
@@ -285,6 +317,22 @@ describe('NwsConditionsService', () => {
         availability: 'stale',
         alerts: [],
       });
+    });
+
+    it('does not return expired alerts and filters them at the database query boundary', async () => {
+      const db = createNwsDbMock({
+        beach: MAPPED_BEACH,
+        snapshot: { retrieved_at: ago(5 * MINUTE_MS) },
+        alerts: [],
+      });
+
+      await expect(new NwsConditionsService(db as never).getAlerts(7)).resolves.toMatchObject({
+        status: 'no-active-alerts',
+        availability: 'available',
+        alerts: [],
+      });
+      expect(db.calls.find((call) => call.table === 'nws_alerts as a')?.where)
+        .toContainEqual(['a.expires_at', '>', expect.any(String)]);
     });
 
     it('does not report no alerts after a newer failed refresh', async () => {
