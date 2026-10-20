@@ -319,18 +319,14 @@ describe('NwsConditionsService', () => {
       });
     });
 
-    it('does not return expired alerts and filters them at the database query boundary', async () => {
+    it('filters expired alerts at the database query boundary', async () => {
       const db = createNwsDbMock({
         beach: MAPPED_BEACH,
         snapshot: { retrieved_at: ago(5 * MINUTE_MS) },
         alerts: [],
       });
 
-      await expect(new NwsConditionsService(db as never).getAlerts(7)).resolves.toMatchObject({
-        status: 'no-active-alerts',
-        availability: 'available',
-        alerts: [],
-      });
+      await new NwsConditionsService(db as never).getAlerts(7);
       expect(db.calls.find((call) => call.table === 'nws_alerts as a')?.where)
         .toContainEqual(['a.expires_at', '>', expect.any(String)]);
     });

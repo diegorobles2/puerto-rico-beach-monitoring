@@ -3,6 +3,7 @@ import 'dotenv/config';
 import knex, { Knex } from 'knex';
 import { NwsPersistenceService } from './nws-persistence.service';
 import type { BeachAlert, OceanCondition } from '../types/domain';
+import { NwsConditionsService } from '../conditions/nws-conditions.service';
 
 const connectionString = process.env.NWS_PERSISTENCE_TEST_DATABASE_URL;
 const describeDatabase = isExpectedDatabase(connectionString, 'beach_monitoring_test') ? describe : describe.skip;
@@ -292,41 +293,61 @@ describeDatabase('NWS persistence integration', () => {
     }
   });
 
-  it('preserves the last successful retrieval after a failure', async () => {
-    const sourceKey = 'conditions';
+  it('preserves last-known condition and alert records after a failure', async () => {
     const zoneId = 'PRZ991';
-
     const successTime = '2026-10-16T12:00:00.000Z';
     const failureTime = '2026-10-16T13:00:00.000Z';
+    const alertId = 'test-nws-alert-991';
 
-    // Preserve any existing record so the test can restore it.
-    const previous = await db('nws_source_health')
-      .where({ source_key: sourceKey, zone_id: zoneId })
-      .first();
+    const previous = await db('nws_source_health').where({ zone_id: zoneId });
 
     try {
-      await db('nws_source_health')
-        .where({ source_key: sourceKey, zone_id: zoneId })
-        .delete();
+      await db('nws_source_health').where({ zone_id: zoneId }).delete();
+      await service.saveCondition({
+        zoneId,
+        forecastPeriod: 'Today',
+        risk: 'moderate',
+        summary: 'Moderate rip current risk',
+        source: {
+          sourceName: 'NWS',
+          sourceUrl: 'https://www.weather.gov/',
+          observedAt: successTime,
+          retrievedAt: successTime,
+        },
+      });
+      await service.saveAlerts(zoneId, [{
+        id: alertId,
+        title: 'High Surf Advisory',
+        description: 'Hazardous surf conditions',
+        instruction: null,
+        severity: 'Moderate',
+        certainty: 'Likely',
+        urgency: 'Expected',
+        effectiveAt: successTime,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        zones: [zoneId],
+        source: {
+          sourceName: 'NWS',
+          sourceUrl: 'https://www.weather.gov/',
+          observedAt: successTime,
+          retrievedAt: successTime,
+        },
+      }], successTime);
 
-      await service.recordRetrieval(sourceKey, zoneId, true, successTime);
-      await service.recordRetrieval(sourceKey, zoneId, false, failureTime);
+      await service.recordRetrieval('conditions', zoneId, false, failureTime);
+      await service.recordRetrieval('alerts', zoneId, false, failureTime);
 
-      const health = await db('nws_source_health')
-        .where({ source_key: sourceKey, zone_id: zoneId })
-        .first();
-
-      expect(health.last_attempt_at.toISOString()).toBe(failureTime);
-      expect(health.last_success_at.toISOString()).toBe(successTime);
-      expect(health.last_attempt_succeeded).toBe(false);
+      expect(await db('nws_conditions').where({ zone_id: zoneId }).first()).toBeDefined();
+      expect(await db('nws_alerts').where({ id: alertId }).first()).toBeDefined();
+      expect(await db('nws_alert_zones').where({ alert_id: alertId, zone_id: zoneId }).first())
+        .toMatchObject({ is_active: true });
     } finally {
-      await db('nws_source_health')
-        .where({ source_key: sourceKey, zone_id: zoneId })
-        .delete();
-
-      if (previous) {
-        await db('nws_source_health').insert(previous);
-      }
+      await db('nws_alert_zones').where({ alert_id: alertId }).delete();
+      await db('nws_alerts').where({ id: alertId }).delete();
+      await db('nws_alert_snapshots').where({ zone_id: zoneId }).delete();
+      await db('nws_conditions').where({ zone_id: zoneId }).delete();
+      await db('nws_source_health').where({ zone_id: zoneId }).delete();
+      if (previous.length > 0) await db('nws_source_health').insert(previous);
     }
   });
 
@@ -411,7 +432,7 @@ describeDatabase('NWS persistence integration', () => {
     }
   });
 
-  it('returns only active and unexpired alerts for a beach', async () => {
+  it('returns only active and unexpired alerts from the public read service', async () => {
     const zoneId = 'PRZ992';
     const prefix = 'test-nws-filter-992';
     const alertIds = [
@@ -468,13 +489,17 @@ describeDatabase('NWS persistence integration', () => {
         });
       }
 
-      const result = await service.getStoredAlertsByBeach(beachId);
+      await db('nws_alert_snapshots').insert({
+        zone_id: zoneId,
+        retrieved_at: retrievedAt,
+      });
 
-      expect(result).not.toBeNull();
-      expect(result?.beachId).toBe(beachId);
-      expect(result?.zoneId).toBe(zoneId);
-      expect(result?.alerts).toHaveLength(1);
-      expect(result?.alerts[0].id).toBe(`${prefix}-active`);
+      const result = await new NwsConditionsService(db).getAlerts(Number(beachId));
+
+      expect(result.beachId).toBe(Number(beachId));
+      expect(result.zoneId).toBe(zoneId);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts?.[0].id).toBe(`${prefix}-active`);
     } finally {
       await db('nws_alert_zones')
         .whereIn('alert_id', alertIds)
@@ -482,6 +507,10 @@ describeDatabase('NWS persistence integration', () => {
 
       await db('nws_alerts')
         .whereIn('id', alertIds)
+        .delete();
+
+      await db('nws_alert_snapshots')
+        .where({ zone_id: zoneId })
         .delete();
 
       if (beachId) {

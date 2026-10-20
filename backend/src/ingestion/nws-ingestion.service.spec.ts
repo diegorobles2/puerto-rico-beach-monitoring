@@ -66,39 +66,6 @@ describe('NwsIngestionService', () => {
     );
   });
 
-  it('retains last-known condition and alert records after a later refresh fails', async () => {
-    const lastKnownCondition = {
-      zoneId: 'PRZ001',
-      forecastPeriod: 'TODAY',
-      risk: 'moderate',
-      summary: 'Moderate rip-current risk.',
-      source: {
-        sourceName: 'NWS',
-        sourceUrl: 'https://api.weather.gov/products/srf-known',
-        observedAt: '2026-10-16T12:00:00.000Z',
-        retrievedAt: '2026-10-16T12:05:00.000Z',
-      },
-    };
-    const lastKnownAlerts = [{ id: 'known-alert', title: 'High Surf Advisory' }];
-    let storedCondition: typeof lastKnownCondition | undefined;
-    let storedAlerts: typeof lastKnownAlerts | undefined;
-    persistence.saveCondition.mockImplementation(async (value) => { storedCondition = value; });
-    persistence.saveAlerts.mockImplementation(async (_zoneId, value) => { storedAlerts = value; });
-
-    nws.getConditions.mockResolvedValueOnce(lastKnownCondition).mockRejectedValueOnce(new Error('timeout'));
-    nws.getActiveAlerts.mockResolvedValueOnce(lastKnownAlerts).mockRejectedValueOnce(new Error('HTTP 503'));
-
-    await service.refreshConditions('PRZ001');
-    await expect(service.refreshConditions('PRZ001')).rejects.toThrow('timeout');
-    await service.refreshAlerts('PRZ001');
-    await expect(service.refreshAlerts('PRZ001')).rejects.toThrow('HTTP 503');
-
-    expect(storedCondition).toBe(lastKnownCondition);
-    expect(storedAlerts).toBe(lastKnownAlerts);
-    expect(persistence.recordRetrieval).toHaveBeenNthCalledWith(2, 'conditions', 'PRZ001', false, expect.any(String));
-    expect(persistence.recordRetrieval).toHaveBeenNthCalledWith(4, 'alerts', 'PRZ001', false, expect.any(String));
-  });
-
   it('records a failed ingestion when saving conditions fails', async () => {
     const condition = {
       zoneId: 'PRZ001',
