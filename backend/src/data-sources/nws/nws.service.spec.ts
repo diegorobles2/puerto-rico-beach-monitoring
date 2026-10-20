@@ -26,6 +26,29 @@ describe('NwsService', () => {
     });
   });
 
+  it('preserves the product URL and issuance/retrieval timestamps', async () => {
+    const retrievedAt = new Date('2026-10-15T01:00:00.000Z');
+    jest.useFakeTimers().setSystemTime(retrievedAt);
+    const fetcher = jest.fn()
+      .mockResolvedValueOnce(json({ '@graph': [
+        { id: 'newest', issuanceTime: '2026-10-14T20:08:00Z', productCode: 'SRF' },
+      ] }))
+      .mockResolvedValueOnce(json(fixture('surf-forecast-success.json')));
+
+    try {
+      await expect(new NwsService(fetcher).getConditions('PRZ001')).resolves.toMatchObject({
+        source: {
+          sourceName: 'NWS',
+          sourceUrl: 'https://api.weather.gov/products/newest',
+          observedAt: '2026-10-14T20:08:00.000Z',
+          retrievedAt: retrievedAt.toISOString(),
+        },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('maps active alerts and accepts a successful empty collection', async () => {
     await expect(new NwsService(jest.fn().mockResolvedValue(json(fixture('alerts-active-success.json')))).getActiveAlerts('PRZ007'))
       .resolves.toHaveLength(1);
@@ -62,5 +85,31 @@ describe('NwsService', () => {
       .rejects.toThrow('NWS active alerts returned malformed JSON');
     await expect(new NwsService(jest.fn().mockResolvedValue(json(fixture('malformed-response.json')))).getActiveAlerts('PRZ007'))
       .rejects.toThrow('NWS active-alert response is malformed');
+  });
+
+  it('treats a timeout as a failed retrieval', async () => {
+    const timeout = new DOMException('The operation timed out', 'TimeoutError');
+    const fetcher = jest.fn().mockRejectedValue(timeout);
+
+    await expect(new NwsService(fetcher).getActiveAlerts('PRZ007'))
+      .rejects.toThrow('Unable to retrieve NWS active alerts');
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://api.weather.gov/alerts/active?zone=PRZ007',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('rejects malformed surf index and product payloads', async () => {
+    const malformedIndex = new NwsService(jest.fn().mockResolvedValue(json({ '@graph': 'not-an-array' })));
+    await expect(malformedIndex.getConditions('PRZ001'))
+      .rejects.toThrow('NWS surf forecast index is malformed');
+
+    const malformedProduct = new NwsService(jest.fn()
+      .mockResolvedValueOnce(json({ '@graph': [
+        { id: 'newest', issuanceTime: '2026-10-14T20:08:00Z', productCode: 'SRF' },
+      ] }))
+      .mockResolvedValueOnce(json({ productCode: 'SRF', productText: null, issuanceTime: '2026-10-14T20:08:00Z' })));
+    await expect(malformedProduct.getConditions('PRZ001'))
+      .rejects.toThrow('NWS surf forecast is malformed');
   });
 });

@@ -82,6 +82,35 @@ describe('NWS condition endpoints', () => {
       });
     });
 
+    it('returns stale risk as unknown while retaining last-known value and provenance', async () => {
+      const retrievedAt = ago(10 * MINUTE_MS);
+      const observedAt = ago(2 * 60 * MINUTE_MS);
+      await start(createDb({
+        beach: BEACH,
+        condition: {
+          forecast_period: 'TODAY',
+          risk: 'high',
+          summary: 'High rip-current risk.',
+          source_url: 'https://api.weather.gov/products/srf-last-known',
+          observed_at: observedAt,
+          retrieved_at: retrievedAt,
+        },
+        health: { last_attempt_at: new Date(), last_attempt_succeeded: false },
+      }));
+
+      const response = await request(app.getHttpServer()).get('/conditions/7/ocean-risk').expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 'unknown',
+        lastKnownStatus: 'high',
+        availability: 'stale',
+        source: 'NWS',
+        sourceUrl: 'https://api.weather.gov/products/srf-last-known',
+        observedAt: observedAt.toISOString(),
+        retrievedAt: retrievedAt.toISOString(),
+      });
+    });
+
     it('reports missing data as unknown rather than low', async () => {
       await start(createDb({ beach: BEACH }));
 
@@ -110,6 +139,89 @@ describe('NWS condition endpoints', () => {
   });
 
   describe('GET /conditions/:beachId/alerts', () => {
+    it('preserves alert source links and timestamps through the HTTP response', async () => {
+      const retrievedAt = ago(5 * MINUTE_MS);
+      const observedAt = ago(20 * MINUTE_MS);
+      const effectiveAt = ago(10 * MINUTE_MS);
+      const expiresAt = new Date(Date.now() + 60 * MINUTE_MS);
+      await start(createDb({
+        beach: BEACH,
+        snapshot: { retrieved_at: retrievedAt },
+        alerts: [{
+          id: 'urn:oid:http-alert',
+          title: 'High Surf Advisory',
+          description: 'Hazardous surf.',
+          instruction: 'Stay out of the water.',
+          severity: 'Moderate',
+          certainty: 'Likely',
+          urgency: 'Expected',
+          effective_at: effectiveAt,
+          expires_at: expiresAt,
+          source_url: 'https://api.weather.gov/alerts/urn:oid:http-alert',
+          observed_at: observedAt,
+          retrieved_at: retrievedAt,
+        }],
+      }));
+
+      const response = await request(app.getHttpServer()).get('/conditions/7/alerts').expect(200);
+
+      expect(response.body).toMatchObject({
+        source: 'NWS',
+        retrievedAt: retrievedAt.toISOString(),
+        availability: 'available',
+        status: 'active-alerts',
+        alerts: [{
+          sourceUrl: 'https://api.weather.gov/alerts/urn:oid:http-alert',
+          observedAt: observedAt.toISOString(),
+          retrievedAt: retrievedAt.toISOString(),
+          effectiveAt: effectiveAt.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+        }],
+      });
+    });
+
+    it('returns stale last-known alerts with a warning state and their provenance', async () => {
+      const retrievedAt = ago(5 * MINUTE_MS);
+      const observedAt = ago(20 * MINUTE_MS);
+      const effectiveAt = ago(10 * MINUTE_MS);
+      const expiresAt = new Date(Date.now() + 60 * MINUTE_MS);
+      await start(createDb({
+        beach: BEACH,
+        snapshot: { retrieved_at: retrievedAt },
+        health: { last_attempt_at: new Date(), last_attempt_succeeded: false },
+        alerts: [{
+          id: 'urn:oid:stale-http-alert',
+          title: 'High Surf Advisory',
+          description: 'Hazardous surf.',
+          instruction: 'Stay out of the water.',
+          severity: 'Moderate',
+          certainty: 'Likely',
+          urgency: 'Expected',
+          effective_at: effectiveAt,
+          expires_at: expiresAt,
+          source_url: 'https://api.weather.gov/alerts/urn:oid:stale-http-alert',
+          observed_at: observedAt,
+          retrieved_at: retrievedAt,
+        }],
+      }));
+
+      const response = await request(app.getHttpServer()).get('/conditions/7/alerts').expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 'active-alerts',
+        source: 'NWS',
+        retrievedAt: retrievedAt.toISOString(),
+        availability: 'stale',
+        alerts: [{
+          sourceUrl: 'https://api.weather.gov/alerts/urn:oid:stale-http-alert',
+          observedAt: observedAt.toISOString(),
+          retrievedAt: retrievedAt.toISOString(),
+          effectiveAt: effectiveAt.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+        }],
+      });
+    });
+
     it('returns an empty list for a current check that found no alerts', async () => {
       const retrievedAt = ago(5 * MINUTE_MS);
       await start(createDb({ beach: BEACH, snapshot: { retrieved_at: retrievedAt }, alerts: [] }));
