@@ -1,18 +1,6 @@
-import type { AlertsResponse, Beach, OceanRiskResponse, WaterQualityCondition } from '../types';
+import type { Beach, WaterQualityCondition } from '../types';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-export async function getOceanRisk(beachId: number | string, signal?: AbortSignal): Promise<OceanRiskResponse> {
-  const response = await fetch(`${apiUrl}/conditions/${beachId}/ocean-risk`, { signal });
-  if (!response.ok) throw new Error('Unable to load ocean risk');
-  return response.json() as Promise<OceanRiskResponse>;
-}
-
-export async function getAlerts(beachId: number | string, signal?: AbortSignal): Promise<AlertsResponse> {
-  const response = await fetch(`${apiUrl}/conditions/${beachId}/alerts`, { signal });
-  if (!response.ok) throw new Error('Unable to load alerts');
-  return response.json() as Promise<AlertsResponse>;
-}
 
 export async function getBeaches(): Promise<Beach[]> {
   const response = await fetch(`${apiUrl}/beaches`);

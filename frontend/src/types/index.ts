@@ -32,47 +32,6 @@ export interface WaterQualityCondition {
 
 export type OceanRisk = 'low' | 'moderate' | 'high' | 'extreme' | 'unknown';
 
-export interface OceanRiskResponse {
-  beachId: number;
-  zoneId: string | null;
-  status: OceanRisk;
-  lastKnownStatus?: OceanRisk;
-  summary: string;
-  forecastPeriod: string | null;
-  source: 'NWS';
-  sourceUrl?: string;
-  observedAt: string | null;
-  retrievedAt: string | null;
-  availability: 'available' | 'stale' | 'unavailable';
-  unavailableReason?: 'beach-not-mapped' | 'no-data' | 'risk-not-published';
-}
-
-export interface NwsAlert {
-  id: string;
-  title: string;
-  description: string;
-  instruction: string | null;
-  severity: string;
-  certainty: string;
-  urgency: string;
-  effectiveAt: string;
-  expiresAt: string;
-  observedAt: string | null;
-  retrievedAt: string;
-  sourceUrl?: string;
-}
-
-export interface AlertsResponse {
-  beachId: number;
-  zoneId: string | null;
-  status: 'active-alerts' | 'no-active-alerts' | 'unknown';
-  source: 'NWS';
-  retrievedAt: string | null;
-  availability: 'available' | 'stale' | 'unavailable';
-  unavailableReason?: 'beach-not-mapped' | 'no-data';
-  alerts: NwsAlert[] | null;
-}
-
 export interface OceanCondition {
   risk: OceanRisk;
   summary: string;
