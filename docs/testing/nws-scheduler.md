@@ -2,7 +2,7 @@
 
 The backend server refreshes NWS data immediately after listening and every 30 minutes while the process remains running. Each run reads distinct, non-null forecast zones from `beaches`, then reuses `NwsIngestionService.refreshZones` to refresh conditions and alerts independently. Failures retain last-known records and update source health; partial failures are logged without stopping other sources or zones. A database query failure is logged and retried on the next tick.
 
-Set `NWS_SCHEDULER_ENABLED=false` in `backend/.env` to disable automatic runs. Scheduling is enabled by default. One-shot application contexts, including `npm run ingest:nws`, do not start the scheduler. Shutdown clears the interval.
+Set `NWS_SCHEDULER_ENABLED=false` in `backend/.env` to disable automatic NWS runs. Scheduling is enabled by default. DRNA has an independent six-hour schedule controlled by `DRNA_SCHEDULER_ENABLED`; see [DRNA scheduling](drna-scheduler.md). One-shot application contexts, including `npm run ingest:nws`, do not start either scheduler. Shutdown clears both intervals.
 
 The overlap guard covers scheduler ticks within one backend process. Run one scheduler-enabled backend instance; disable scheduling in other replicas. Manual ingestion is independent of this guard and should not be run alongside an active scheduled refresh. Distributed locking is needed before enabling scheduling on multiple replicas. Sleeping or stopped hosting cannot meet the refresh interval.
 
