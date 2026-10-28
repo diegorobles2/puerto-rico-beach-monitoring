@@ -45,17 +45,34 @@ export class NwsService {
   }
 
   async getForecastZone(latitude: number, longitude: number): Promise<string> {
+    const zoneUrl = await this.getForecastZoneUrl(latitude, longitude);
+    const match = /\/zones\/forecast\/(PRZ\d{3})\/?$/.exec(zoneUrl);
+
+    if (!match) {
+      throw new Error('NWS point response has no Puerto Rico forecast zone');
+    }
+
+    return match[1];
+  }
+
+  async getForecastZoneUrl(latitude: number, longitude: number): Promise<string> {
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
       || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
       throw new Error('Invalid coordinates for NWS point lookup');
     }
-    const point = await this.getJson<NwsPointResponse>(`${API_URL}/points/${latitude},${longitude}`, 'point metadata');
+
+    const point = await this.getJson<NwsPointResponse>(
+      `${API_URL}/points/${latitude},${longitude}`,
+      'point metadata',
+    );
+
     const properties = point.properties as { forecastZone?: unknown } | null;
-    const match = typeof properties?.forecastZone === 'string'
-      ? /\/zones\/forecast\/(PRZ\d{3})\/?$/.exec(properties.forecastZone)
-      : null;
-    if (!match) throw new Error('NWS point response has no Puerto Rico forecast zone');
-    return match[1];
+
+    if (typeof properties?.forecastZone !== 'string') {
+      throw new Error('NWS point response has no Puerto Rico forecast zone');
+    }
+
+    return properties.forecastZone;
   }
 
   private async getJson<T>(url: string, label: string): Promise<T> {

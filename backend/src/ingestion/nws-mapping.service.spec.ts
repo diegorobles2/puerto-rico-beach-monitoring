@@ -24,7 +24,7 @@ describe('NwsMappingService', () => {
 
   it('records an unavailable point as unsupported', async () => {
     const rows = [beach(1)];
-    const nws = { getForecastZone: jest.fn().mockRejectedValue(new Error('NWS point metadata returned HTTP 404')) } as unknown as NwsService;
+    const nws = { getForecastZoneUrl: jest.fn().mockRejectedValue(new Error('NWS point metadata returned HTTP 404')) } as unknown as NwsService;
 
     await expect(new NwsMappingService(nws, fakeDatabase(rows)).refresh())
       .resolves.toEqual({ mapped: 0, unsupported: 1 });
@@ -33,11 +33,59 @@ describe('NwsMappingService', () => {
 
   it('does not let a malformed response overwrite a valid mapping', async () => {
     const rows = [beach(1, 'PRZ007')];
-    const nws = { getForecastZone: jest.fn().mockRejectedValue(new Error('NWS point response has no Puerto Rico forecast zone')) } as unknown as NwsService;
+    const nws = { getForecastZoneUrl: jest.fn().mockRejectedValue(new Error('NWS point response has no Puerto Rico forecast zone')) } as unknown as NwsService;
 
     await new NwsMappingService(nws, fakeDatabase(rows)).refresh();
 
     expect(rows[0]).toMatchObject({ nws_forecast_zone: 'PRZ007', nws_mapping_error: null });
+  });
+
+  it('prefers an automatic land zone over a verified fallback', async () => {
+    const rows = [{
+      ...beach(1),
+      drna_station_id: 'RW-12B',
+      latitude: 17.9747944,
+      longitude: -67.2129056,
+    }];
+
+    const service = new NwsMappingService(
+      nwsResolving('PRZ005'),
+      fakeDatabase(rows),
+    );
+
+    await expect(service.refresh()).resolves.toEqual({
+      mapped: 1,
+      unsupported: 0,
+    });
+
+    expect(rows[0]).toMatchObject({
+      nws_forecast_zone: 'PRZ005',
+      nws_mapping_method: 'automatic',
+      nws_mapping_registry_version: null,
+    });
+  });
+  it('leaves an unverified marine zone unresolved', async () => {
+    const rows = [{
+      ...beach(1),
+      drna_station_id: 'RW-12B',
+      latitude: 17.9747944,
+      longitude: -67.2129056,
+    }];
+
+    const service = new NwsMappingService(
+      nwsResolving('AMZ712'),
+      fakeDatabase(rows),
+    );
+
+    await expect(service.refresh()).resolves.toEqual({
+      mapped: 0,
+      unsupported: 1,
+    });
+
+    expect(rows[0].nws_forecast_zone).toBeNull();
+    expect(rows[0].nws_mapping_error).toBe(
+      'No verified fallback for this marine zone',
+    );
   });
 });
 
@@ -45,9 +93,6 @@ function beach(id: number, zone: string | null = null): BeachRow {
   return { id, latitude: 18.3843639, longitude: -67.2129889, nws_forecast_zone: zone, nws_mapping_error: null };
 }
 
-function nwsResolving(zone: string): NwsService {
-  return { getForecastZone: jest.fn().mockResolvedValue(zone) } as unknown as NwsService;
-}
 
 function fakeDatabase(rows: BeachRow[]): Knex {
   return jest.fn(() => ({
@@ -64,4 +109,12 @@ function fakeDatabase(rows: BeachRow[]): Knex {
       return query;
     },
   })) as unknown as Knex;
+}
+
+function nwsResolving(zone: string): NwsService {
+  return {
+    getForecastZoneUrl: jest.fn().mockResolvedValue(
+      `https://api.weather.gov/zones/forecast/${zone}`,
+    ),
+  } as unknown as NwsService;
 }
