@@ -119,4 +119,20 @@ describe('NwsIngestionService', () => {
     expect(conditions).toHaveBeenCalledTimes(2);
     expect(alerts).toHaveBeenCalledTimes(2);
   });
+
+  it('records upstream failures without saving them and still persists other sources and zones', async () => {
+    persistence.saveCondition.mockResolvedValue(undefined);
+    persistence.saveAlerts.mockResolvedValue(undefined);
+    const condition = { zoneId: 'PRZ002' };
+    nws.getConditions.mockRejectedValueOnce(new Error('timeout')).mockResolvedValueOnce(condition);
+    nws.getActiveAlerts.mockResolvedValue([]);
+
+    await expect(service.refreshZones(['PRZ001', 'PRZ002'])).resolves.toEqual({ attempted: 4, failed: 1 });
+
+    expect(persistence.saveCondition).toHaveBeenCalledTimes(1);
+    expect(persistence.saveCondition).toHaveBeenCalledWith(condition);
+    expect(persistence.saveAlerts).toHaveBeenCalledTimes(2);
+    expect(persistence.recordRetrieval).toHaveBeenCalledWith('conditions', 'PRZ001', false, expect.any(String));
+    expect(persistence.recordRetrieval).toHaveBeenCalledWith('alerts', 'PRZ002', true, expect.any(String));
+  });
 });
