@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WaterQualityCondition } from '../types';
 import { BeachPage } from './BeachPage';
@@ -112,5 +112,49 @@ describe('BeachPage water quality', () => {
     const card = await waterQualityCard();
 
     expect(card).not.toHaveTextContent(/safe|suitable/i);
+  });
+
+  it('loads NWS resources independently and retains the selected beach data after refresh failure', async () => {
+    let failed = false;
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.endsWith('/beaches')) return new Response(JSON.stringify([PICO_DE_PIEDRA]));
+      if (url.endsWith('/water-quality')) return new Response(JSON.stringify(ADVISORY));
+      if (failed) return new Response('', { status: 503 });
+      if (url.endsWith('/ocean-risk')) return new Response(JSON.stringify({
+        beachId: 7, zoneId: 'PRZ001', status: 'high', summary: 'Dangerous rip currents.',
+        forecastPeriod: 'TODAY', source: 'NWS', observedAt: null, retrievedAt: null, availability: 'available',
+      }));
+      return new Response(JSON.stringify({
+        beachId: 7, zoneId: 'PRZ001', status: 'no-active-alerts', source: 'NWS',
+        retrievedAt: null, availability: 'available', alerts: [],
+      }));
+    }));
+    render(<BeachPage />);
+    await screen.findByText('Current rip-current risk: high');
+    await screen.findByText(/No active alerts reported/);
+    failed = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh NWS data' }));
+    expect(screen.getByText('Last-known risk: high (historical)')).toBeInTheDocument();
+    await screen.findByText(/Unable to load ocean risk/);
+    await screen.findByText(/Unable to load alerts/);
+    expect(screen.getByText('Dangerous rip currents.')).toBeInTheDocument();
+    expect(screen.queryByText(/No active alerts reported/)).not.toBeInTheDocument();
+  });
+
+  it('does not display another beach risk while the new selection loads', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.endsWith('/beaches')) return new Response(JSON.stringify([PICO_DE_PIEDRA, { ...PICO_DE_PIEDRA, id: 8, name: 'Other beach' }]));
+      if (url.includes('/conditions/8/')) return new Promise<Response>(() => {});
+      if (url.endsWith('/water-quality')) return new Response(JSON.stringify(ADVISORY));
+      if (url.endsWith('/ocean-risk')) return new Response(JSON.stringify({
+        beachId: 7, status: 'high', summary: 'First beach forecast', availability: 'available',
+      }));
+      return new Response('', { status: 503 });
+    }));
+    render(<BeachPage />);
+    await screen.findByText('Current rip-current risk: high');
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '8' } });
+    expect(screen.queryByText('First beach forecast')).not.toBeInTheDocument();
+    expect(screen.getByText('Loading ocean risk...')).toBeInTheDocument();
   });
 });
