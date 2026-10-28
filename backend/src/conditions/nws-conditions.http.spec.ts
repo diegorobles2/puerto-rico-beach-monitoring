@@ -1,3 +1,4 @@
+import type { NwsMappingProvenance } from '../data-sources/nws/nws-mapping-eligibility';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request = require('supertest');
@@ -10,7 +11,7 @@ const MINUTE_MS = 60 * 1000;
 const ago = (ms: number) => new Date(Date.now() - ms);
 
 interface Rows {
-  beach?: { id: number; nws_forecast_zone: string | null };
+  beach?: { id: number; nws_forecast_zone: string | null } & NwsMappingProvenance;
   condition?: Record<string, unknown>;
   snapshot?: { retrieved_at: Date };
   health?: { last_attempt_at: Date; last_attempt_succeeded: boolean };
@@ -34,7 +35,8 @@ function createDb(rows: Rows) {
   });
 }
 
-const BEACH = { id: 7, nws_forecast_zone: 'PRZ001' };
+const BEACH = { id: 7, nws_forecast_zone: 'PRZ001', nws_mapping_method: 'automatic',
+  latitude: 18.4, longitude: -66.1, nws_mapping_latitude: 18.4, nws_mapping_longitude: -66.1, nws_mapping_registry_version: null };
 
 describe('NWS condition endpoints', () => {
   let app: INestApplication;
@@ -257,5 +259,23 @@ describe('NWS condition endpoints', () => {
 
       await request(app.getHttpServer()).get('/conditions/999/alerts').expect(404);
     });
+  });
+});
+
+describe('unverified mapping HTTP contracts', () => {
+  let app: INestApplication;
+  afterEach(async () => app?.close());
+  it.each([
+    ['legacy', { ...BEACH, nws_mapping_method: 'legacy', nws_mapping_latitude: null, nws_mapping_longitude: null }],
+    ['coordinate mismatch', { ...BEACH, longitude: -66.2 }],
+  ])('returns existing unavailable contracts for %s', async (_name, beach) => {
+    const module = await Test.createTestingModule({ controllers: [ConditionsController],
+      providers: [ConditionsService, NwsConditionsService, { provide: DATABASE, useValue: createDb({ beach }) }] }).compile();
+    app = module.createNestApplication(); await app.init();
+    const risk = await request(app.getHttpServer()).get('/conditions/7/ocean-risk').expect(200);
+    expect(risk.body).toMatchObject({ beachId: 7, zoneId: null, status: 'unknown', availability: 'unavailable', unavailableReason: 'beach-not-mapped', forecastPeriod: null });
+    const alerts = await request(app.getHttpServer()).get('/conditions/7/alerts').expect(200);
+    expect(alerts.body).toEqual({ beachId: 7, zoneId: null, status: 'unknown', source: 'NWS', retrievedAt: null,
+      availability: 'unavailable', unavailableReason: 'beach-not-mapped', alerts: null });
   });
 });

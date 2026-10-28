@@ -1,3 +1,7 @@
+import { up as addZone } from '../database/migrations/20261015010240_add_nws_forecast_zone';
+import { up as addProvenance } from '../database/migrations/20261025230000_add_nws_mapping_provenance';
+import { up as addInvalidation } from '../database/migrations/20261025233000_invalidate_stale_nws_mappings';
+import { up as addPersistence } from '../database/migrations/20261016190000_add_nws_persistence';
 
 import 'dotenv/config';
 import knex, { Knex } from 'knex';
@@ -6,25 +10,41 @@ import type { BeachAlert, OceanCondition } from '../types/domain';
 import { NwsConditionsService } from '../conditions/nws-conditions.service';
 
 const connectionString = process.env.NWS_PERSISTENCE_TEST_DATABASE_URL;
-const describeDatabase = isExpectedDatabase(connectionString, 'beach_monitoring_test') ? describe : describe.skip;
+const disposableFixture = isExpectedDatabase(connectionString, 'beach_monitoring_migration_test');
+const describeDatabase = disposableFixture || isExpectedDatabase(connectionString, 'beach_monitoring_test') ? describe : describe.skip;
 
 describeDatabase('NWS persistence integration', () => {
   let db: Knex;
+  let rootDb: Knex;
+  let fixture: Knex.Transaction | undefined;
   let service: NwsPersistenceService;
 
   beforeAll(async () => {
-    db = knex({
+    rootDb = knex({
       client: 'pg',
       connection: connectionString!,
     });
 
+    db = rootDb;
+    if (disposableFixture) {
+      const existing = await rootDb('information_schema.tables').select('table_name').where({ table_schema: 'public' })
+        .whereIn('table_name', ['beaches', 'nws_conditions', 'nws_alerts', 'nws_alert_zones', 'nws_alert_snapshots', 'nws_source_health']);
+      if (existing.length) throw new Error('Refusing to replace existing tables in the disposable persistence fixture');
+      fixture = await rootDb.transaction(); db = fixture;
+      await fixture.raw(`create table public.beaches (
+        id bigint generated always as identity primary key,
+        drna_station_id text not null unique, name text not null, municipality text not null,
+        latitude double precision check (latitude between -90 and 90),
+        longitude double precision check (longitude between -180 and 180)
+      )`);
+      await addZone(fixture); await addProvenance(fixture); await addInvalidation(fixture); await addPersistence(fixture);
+    }
     service = new NwsPersistenceService(db);
   });
 
   afterAll(async () => {
-    if (db) {
-      await db.destroy();
-    }
+    if (fixture) await fixture.rollback();
+    if (rootDb) await rootDb.destroy();
   });
 
   it('upserts a condition without creating duplicates', async () => {
@@ -356,12 +376,12 @@ describeDatabase('NWS persistence integration', () => {
     const zoneId = 'PRZ994';
 
     await expect(
-      db('nws_alert_zones').insert({
+      db.transaction(trx => trx('nws_alert_zones').insert({
         alert_id: alertId,
         zone_id: zoneId,
         is_active: true,
         last_seen_at: '2026-10-16T12:00:00.000Z',
-      }),
+      })),
     ).rejects.toMatchObject({
       code: '23503',
     });
@@ -389,6 +409,9 @@ describeDatabase('NWS persistence integration', () => {
           latitude: 18.4,
           longitude: -67.1,
           nws_forecast_zone: zoneId,
+          nws_mapping_method: 'automatic',
+          nws_mapping_latitude: 18.4,
+          nws_mapping_longitude: -67.1,
         })
         .returning('id');
 
@@ -460,6 +483,9 @@ describeDatabase('NWS persistence integration', () => {
           latitude: 18.4,
           longitude: -67.1,
           nws_forecast_zone: zoneId,
+          nws_mapping_method: 'automatic',
+          nws_mapping_latitude: 18.4,
+          nws_mapping_longitude: -67.1,
         })
         .returning('id');
 

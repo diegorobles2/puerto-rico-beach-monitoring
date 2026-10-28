@@ -1,3 +1,4 @@
+import { NWS_OPERATIONAL_MAPPING_COLUMNS, operationalNwsZone } from '../data-sources/nws/nws-mapping-eligibility';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { DATABASE } from '../database/database.module';
@@ -176,7 +177,7 @@ export class NwsPersistenceService {
 
   async getStoredConditionsByBeach(beachId: string) {
     const beach = await this.db('beaches')
-      .select('id', 'nws_forecast_zone')
+      .select('id', ...NWS_OPERATIONAL_MAPPING_COLUMNS)
       .where('id', beachId)
       .first();
 
@@ -184,7 +185,8 @@ export class NwsPersistenceService {
       return null;
     }
 
-    if (!beach.nws_forecast_zone) {
+    const zoneId = operationalNwsZone(beach);
+    if (!zoneId) {
       return {
         beachId: String(beach.id),
         zoneId: null,
@@ -202,19 +204,19 @@ export class NwsPersistenceService {
         'observed_at',
         'retrieved_at',
       )
-      .where('zone_id', beach.nws_forecast_zone)
+      .where('zone_id', zoneId)
       .first();
 
     return {
       beachId: String(beach.id),
-      zoneId: beach.nws_forecast_zone,
+      zoneId,
       condition: condition ?? null,
     };
   }
 
   async getStoredAlertsByBeach(beachId: string) {
     const beach = await this.db('beaches')
-      .select('id', 'nws_forecast_zone')
+      .select('id', ...NWS_OPERATIONAL_MAPPING_COLUMNS)
       .where('id', beachId)
       .first();
 
@@ -222,7 +224,8 @@ export class NwsPersistenceService {
       return null;
     }
 
-    if (!beach.nws_forecast_zone) {
+    const zoneId = operationalNwsZone(beach);
+    if (!zoneId) {
       return {
         beachId: String(beach.id),
         zoneId: null,
@@ -232,7 +235,7 @@ export class NwsPersistenceService {
 
     const alerts = await this.db('nws_alerts as a')
       .join('nws_alert_zones as az', 'a.id', 'az.alert_id')
-      .where('az.zone_id', beach.nws_forecast_zone)
+      .where('az.zone_id', zoneId)
       .where('az.is_active', true)
       .where('a.expires_at', '>', this.db.fn.now())
       .select(
@@ -253,7 +256,7 @@ export class NwsPersistenceService {
 
     return {
       beachId: String(beach.id),
-      zoneId: beach.nws_forecast_zone,
+      zoneId,
       alerts,
     };
   }

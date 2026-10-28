@@ -1,0 +1,3 @@
+docs/architecture/nws-fallback-verification.csv text eol=lf
+docs/architecture/nws-fallback-verification.md text eol=lf
+backend/scripts/verify-nws-fallbacks.py text eol=lf

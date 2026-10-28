@@ -7,7 +7,8 @@ async function run(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   try {
     const result = await app.get(NwsMappingService).refresh();
-    console.log(`NWS mapping complete: ${result.mapped} mapped, ${result.unsupported} unsupported`);
+    console.log(`NWS mapping complete: ${result.automatic} automatic, ${result.verifiedFallbacks} verified fallbacks, `
+      + `${result.preserved} preserved, ${result.unresolved} unresolved, ${result.lookupFailures} lookup failures`);
   } finally {
     await app.close();
   }

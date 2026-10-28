@@ -1,3 +1,4 @@
+import { NWS_OPERATIONAL_MAPPING_COLUMNS, operationalNwsZone } from '../data-sources/nws/nws-mapping-eligibility';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { DATABASE } from '../database/database.module';
@@ -171,7 +172,7 @@ export class NwsConditionsService {
   private async findForecastZone(beachId: number): Promise<string | null> {
     const beach = await this.db('beaches')
       .where({ id: beachId })
-      .first('id', 'nws_forecast_zone');
+      .first('id', ...NWS_OPERATIONAL_MAPPING_COLUMNS);
 
     if (!beach) {
       throw new NotFoundException(
@@ -179,7 +180,7 @@ export class NwsConditionsService {
       );
     }
 
-    return beach.nws_forecast_zone ?? null;
+    return operationalNwsZone(beach);
   }
 
   private async latestAttemptFailed(

@@ -1,3 +1,5 @@
+import { NWS_FALLBACK_REGISTRY_VERSION } from '../ingestion/nws-fallback-registry';
+import type { NwsMappingProvenance } from '../data-sources/nws/nws-mapping-eligibility';
 import { NotFoundException } from '@nestjs/common';
 import {
   ALERTS_STALE_AFTER_MS,
@@ -17,7 +19,7 @@ function fromNow(ms: number): Date {
 }
 
 interface Tables {
-  beach?: { id: number; nws_forecast_zone: string | null };
+  beach?: { id: number; nws_forecast_zone: string | null } & NwsMappingProvenance;
   condition?: Record<string, unknown>;
   snapshot?: { retrieved_at: Date | string };
   health?: { last_attempt_at: Date | string; last_attempt_succeeded: boolean };
@@ -57,7 +59,8 @@ function createNwsDbMock(tables: Tables) {
   return Object.assign(db, { calls });
 }
 
-const MAPPED_BEACH = { id: 7, nws_forecast_zone: 'PRZ001' };
+const MAPPED_BEACH = { id: 7, nws_forecast_zone: 'PRZ001', nws_mapping_method: 'automatic',
+  latitude: 18.4, longitude: -66.1, nws_mapping_latitude: 18.4, nws_mapping_longitude: -66.1, nws_mapping_registry_version: null };
 const SOURCE_URL = 'https://api.weather.gov/products/srf-1';
 
 function conditionRow(overrides: Record<string, unknown> = {}) {
@@ -397,5 +400,24 @@ describe('NwsConditionsService', () => {
 
       await expect(service.getAlerts(999)).rejects.toBeInstanceOf(NotFoundException);
     });
+  });
+});
+
+describe('unverified mappings cannot authorize NWS API data', () => {
+  it.each([
+    ['legacy', { ...MAPPED_BEACH, nws_mapping_method: 'legacy', nws_mapping_latitude: null, nws_mapping_longitude: null }],
+    ['superseded fallback revision', { ...MAPPED_BEACH, nws_mapping_method: 'verified-fallback', nws_mapping_registry_version: '2026-10-25.v1' }],
+    ['unknown fallback revision', { ...MAPPED_BEACH, nws_mapping_method: 'verified-fallback', nws_mapping_registry_version: 'unknown-review' }],
+    ['mismatched coordinates', { ...MAPPED_BEACH, nws_mapping_latitude: 18 }],
+    ['missing provenance', { id: 7, nws_forecast_zone: 'PRZ001' }],
+  ])('excludes %s from both public readers', async (_name, beach) => {
+    const db = createNwsDbMock({ beach }); const service = new NwsConditionsService(db as never);
+    expect(await service.getOceanRisk(7)).toMatchObject({ zoneId: null, status: 'unknown', availability: 'unavailable', unavailableReason: 'beach-not-mapped' });
+    expect(await service.getAlerts(7)).toMatchObject({ zoneId: null, status: 'unknown', availability: 'unavailable', alerts: null, unavailableReason: 'beach-not-mapped' });
+    expect(db.calls.every(call => call.table === 'beaches')).toBe(true);
+  });
+  it('keeps a verified fallback operational with the existing ocean-risk response contract', async () => {
+    const db = createNwsDbMock({ beach: { ...MAPPED_BEACH, nws_mapping_method: 'verified-fallback', nws_mapping_registry_version: NWS_FALLBACK_REGISTRY_VERSION }, condition: conditionRow() });
+    expect(await new NwsConditionsService(db as never).getOceanRisk(7)).toMatchObject({ zoneId: 'PRZ001', status: 'moderate', availability: 'available' });
   });
 });
