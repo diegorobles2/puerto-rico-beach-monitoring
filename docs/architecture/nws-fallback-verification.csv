@@ -1,0 +1,16 @@
+drna_station_id,beach_name,latitude,longitude,verified_zone,inside_polygon,nearest_distance_m,second_nearest_distance_m,second_nearest_zone
+RW-12B,Playa el Combate,17.9747944,-67.2129056,PRZ011,false,15.1,14307.3,PRZ010
+RW-13,Balneario de Boquerón,18.0194417,-67.1722444,PRZ011,false,19.8,7912.0,PRZ010
+RW-14A,Playa Moja Casabe,17.98581,-67.21459,PRZ011,false,36.5,13714.6,PRZ010
+RW-19,Balneario Punta Salinas,18.4716583,-66.1859944,PRZ001,false,6.4,2382.5,PRZ005
+RW-1A,Balneario La Monserrate,18.3855917,-65.7294722,PRZ002,true,0.0,16083.6,PRZ004
+RW-21C,Balneario de Carolina,18.4459889,-66.0035722,PRZ001,false,29.0,1741.8,PRZ002
+RW-23,Balneario de Puerto Nuevo,18.4913667,-66.3990444,PRZ005,false,22.5,12785.0,PRZ006
+RW-28,Playa El Alambique,18.4440917,-66.02215,PRZ001,false,20.1,3469.5,PRZ002
+RW-29,Vacía Talega,18.4478583,-65.9062306,PRZ002,false,9.8,3423.3,PRZ001
+RW-31,Tropical Beach,18.1869278,-65.7259667,PRZ002,false,32.8,10575.3,PRZ004
+RW-32,Playa Azul,18.3818667,-65.7184583,PRZ002,false,24.9,16544.3,PRZ004
+RW-37,Villa Lamela,18.0645333,-67.1975278,PRZ011,false,19.3,9367.4,PRZ010
+RW-38,Muelle de Arecibo,18.4792583,-66.7004667,PRZ005,false,31.9,6808.8,PRZ008
+RW-4,Balneario Punta Santiago,18.1584139,-65.7551861,PRZ002,false,17.1,8345.9,PRZ004
+RW-8,Playa Buyé,18.0488722,-67.198625,PRZ011,false,15.7,9607.1,PRZ010
