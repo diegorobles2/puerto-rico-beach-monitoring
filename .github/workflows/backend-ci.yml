@@ -9,6 +9,25 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Ephemeral service credentials only; never use application secrets here.
+      DATABASE_URL: postgresql://postgres:ci-only-password@127.0.0.1:5432/beach_monitoring_test
+      NWS_MIGRATION_TEST_DATABASE_URL: postgresql://postgres:ci-only-password@127.0.0.1:5432/beach_monitoring_migration_test
+      NWS_PERSISTENCE_TEST_DATABASE_URL: postgresql://postgres:ci-only-password@127.0.0.1:5432/beach_monitoring_migration_test
     defaults:
       run:
         working-directory: backend
@@ -21,5 +40,43 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Initialize disposable PostgreSQL databases
+        run: |
+          node <<'NODE'
+          const { Client } = require('pg');
+          const expected = {
+            DATABASE_URL: 'beach_monitoring_test',
+            NWS_MIGRATION_TEST_DATABASE_URL: 'beach_monitoring_migration_test',
+            NWS_PERSISTENCE_TEST_DATABASE_URL: 'beach_monitoring_migration_test',
+          };
+          for (const [name, database] of Object.entries(expected)) {
+            const url = new URL(process.env[name]);
+            if (url.protocol !== 'postgresql:' || url.hostname !== '127.0.0.1'
+              || url.port !== '5432' || url.pathname !== `/${database}`) {
+              throw new Error(`Unsafe CI database configuration: ${name}`);
+            }
+          }
+          const adminUrl = new URL(process.env.DATABASE_URL);
+          adminUrl.pathname = '/postgres';
+          const client = new Client({ connectionString: adminUrl.href });
+          (async () => {
+            try {
+              await client.connect();
+              // Migrations revoke privileges from these Supabase-compatible roles.
+              await client.query('CREATE ROLE anon NOLOGIN');
+              await client.query('CREATE ROLE authenticated NOLOGIN');
+              await client.query('CREATE DATABASE beach_monitoring_test');
+              await client.query('CREATE DATABASE beach_monitoring_migration_test');
+            } finally {
+              await client.end();
+            }
+          })().catch(() => {
+            console.error('Disposable CI database initialization failed');
+            process.exitCode = 1;
+          });
+          NODE
+      # DRNA tests need the full schema. Keep the separate NWS fixture database
+      # empty: its suites create/roll back their own schemas and run serially.
+      - run: npm run db:migrate
       - run: npm test -- --runInBand
 
