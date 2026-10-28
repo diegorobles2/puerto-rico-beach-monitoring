@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { BeachDetails } from '../components/beach/BeachDetails';
 import { BeachMap } from '../components/map/BeachMap';
 import { OceanRiskCard } from '../components/status/OceanRiskCard';
+import { AlertsCard } from '../components/status/AlertsCard';
 import { WaterQualityCard } from '../components/status/WaterQualityCard';
-import { getBeachConditions, getBeaches } from '../services/beachApi';
-import type { Beach, WaterQualityCondition } from '../types';
+import { getAlerts, getOceanRisk, getBeachConditions, getBeaches } from '../services/beachApi';
+import type { AlertsResponse, OceanRiskResponse, Beach, WaterQualityCondition } from '../types';
+
+interface Resource<T> { data?: T; loading: boolean; error?: string }
 
 export function BeachPage() {
   const [beaches, setBeaches] = useState<Beach[]>([]);
@@ -13,6 +16,28 @@ export function BeachPage() {
   const [condition, setCondition] = useState<WaterQualityCondition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [risks, setRisks] = useState<Record<string, Resource<OceanRiskResponse>>>({});
+  const [alerts, setAlerts] = useState<Record<string, Resource<AlertsResponse>>>({});
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    if (selectedBeachId == null) return;
+    const id = String(selectedBeachId);
+    const controller = new AbortController();
+    setRisks(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
+    setAlerts(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
+    void getOceanRisk(id, controller.signal).then(data => {
+      if (!controller.signal.aborted) setRisks(previous => ({ ...previous, [id]: { data, loading: false } }));
+    }).catch(() => {
+      if (!controller.signal.aborted) setRisks(previous => ({ ...previous, [id]: { ...previous[id], loading: false, error: 'Unable to load ocean risk' } }));
+    });
+    void getAlerts(id, controller.signal).then(data => {
+      if (!controller.signal.aborted) setAlerts(previous => ({ ...previous, [id]: { data, loading: false } }));
+    }).catch(() => {
+      if (!controller.signal.aborted) setAlerts(previous => ({ ...previous, [id]: { ...previous[id], loading: false, error: 'Unable to load alerts' } }));
+    });
+    return () => controller.abort();
+  }, [selectedBeachId, refresh]);
 
   useEffect(() => {
     async function loadBeaches() {
@@ -96,8 +121,10 @@ export function BeachPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <WaterQualityCard condition={condition} loading={loading} error={error} />
-        <OceanRiskCard />
+        <OceanRiskCard condition={risks[String(selectedBeachId)]?.data} loading={risks[String(selectedBeachId)]?.loading} error={risks[String(selectedBeachId)]?.error} />
+        <AlertsCard response={alerts[String(selectedBeachId)]?.data} loading={alerts[String(selectedBeachId)]?.loading} error={alerts[String(selectedBeachId)]?.error} />
       </div>
+      {selectedBeachId != null && <button type="button" className="rounded border border-slate-400 px-4 py-2" onClick={() => setRefresh(value => value + 1)}>Refresh NWS data</button>}
     </main>
   );
 }
