@@ -389,6 +389,7 @@ describeDatabase('NWS persistence integration', () => {
           latitude: 18.4,
           longitude: -67.1,
           nws_forecast_zone: zoneId,
+          nws_mapping_method: 'legacy',
         })
         .returning('id');
 
@@ -460,6 +461,7 @@ describeDatabase('NWS persistence integration', () => {
           latitude: 18.4,
           longitude: -67.1,
           nws_forecast_zone: zoneId,
+          nws_mapping_method: 'legacy',
         })
         .returning('id');
 
