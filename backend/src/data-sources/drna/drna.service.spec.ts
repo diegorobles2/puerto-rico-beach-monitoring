@@ -91,15 +91,27 @@ describe('findLatestRecord', () => {
     });
   });
 
-  it('uses the Census geography for the station municipality', async () => {
-    const adapter = service([response(archive), response(notification), response(pdf), response(notification), response(pdf)]);
+  it('retrieves DRNA stations without requiring Census geocoding', async () => {
+    const adapter = service([
+      response(archive),
+      response(notification),
+      response(pdf),
+      response(notification),
+      response(pdf),
+    ]);
 
     await expect(adapter.service.getCatalog()).resolves.toMatchObject({
-      stations: [{ stationId: 'RW-22', municipality: 'Aguada' }],
+      stations: [
+        {
+          stationId: 'RW-22',
+          municipality: 'Unavailable',
+        },
+      ],
     });
-    expect(adapter.fetcher).toHaveBeenCalledWith(
-      expect.stringContaining('geocoding.geo.census.gov/geocoder/geographies/coordinates'),
-      { signal: expect.any(AbortSignal) },
+
+    expect(adapter.fetcher).not.toHaveBeenCalledWith(
+      expect.stringContaining('geocoding.geo.census.gov'),
+      expect.anything(),
     );
   });
 

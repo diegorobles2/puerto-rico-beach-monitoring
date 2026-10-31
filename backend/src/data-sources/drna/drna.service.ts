@@ -6,7 +6,6 @@ import type { DrnaCatalog, DrnaMonitoringRecord } from './drna.types';
 
 const ARCHIVE_URL =
   'https://www.drna.pr.gov/cat/programas-y-proyectos/monitoria-de-playas/notificaciones-ambientales/';
-const CENSUS_GEOCODER_URL = 'https://geocoding.geo.census.gov/geocoder/geographies/coordinates';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
@@ -66,9 +65,6 @@ export class DrnaService {
 
     const stationList = [...stations.values()];
     validateCatalog(stationList, metadata.length >= 30);
-    await Promise.all(stationList.map(async (station) => {
-      station.municipality = await this.getMunicipality(station.latitude!, station.longitude!);
-    }));
 
     return {
       stations: stationList,
@@ -103,20 +99,6 @@ export class DrnaService {
     }
     if (fallback.length) return fallback;
     throw new Error('DRNA archive does not contain usable station metadata');
-  }
-
-  private async getMunicipality(latitude: number, longitude: number): Promise<string> {
-    const url = new URL(CENSUS_GEOCODER_URL);
-    url.search = new URLSearchParams({
-      x: String(longitude), y: String(latitude), benchmark: 'Public_AR_Current',
-      vintage: 'Current_Current', layers: 'Counties', format: 'json',
-    }).toString();
-    const body = await (await this.getResponse(url.toString(), 'municipality')).json() as {
-      result?: { geographies?: { Counties?: Array<{ BASENAME?: string }> } };
-    };
-    const municipality = body.result?.geographies?.Counties?.[0]?.BASENAME?.trim();
-    if (!municipality) throw new Error(`No municipality found for DRNA coordinates ${latitude}, ${longitude}`);
-    return municipality;
   }
 
   private async getResponse(url: string, label: string): Promise<Response> {
