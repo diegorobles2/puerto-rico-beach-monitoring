@@ -52,7 +52,7 @@ cd backend; npm test
 cd frontend; npm test
 ```
 
-The database integration test in `backend/src/ingestion/ingestion.service.spec.ts` runs only when `DATABASE_URL` is set. Otherwise it is skipped.
+The persistence integration test in `backend/src/ingestion/ingestion.service.spec.ts` requires `DATABASE_URL`. It is skipped in a basic local run when no database is configured; backend CI supplies an isolated PostgreSQL 16 database and runs it. See [the PostgreSQL integration guide](postgres-integration.md).
 
 ## Continuous integration
 
@@ -90,17 +90,10 @@ Prerequisites: `DATABASE_URL` in `backend/.env`.
 
 5. Stop the backend and reload the page. The card should show **Water quality unavailable** with an error message, not a status.
 
-## Known gaps for the rest of Sprint 2
+## Current limitations and related workflows
 
-- **Ingestion is not tested in CI.** The ingestion database test needs `DATABASE_URL`, which CI does not have, so the step from parsed rows to stored rows runs only on developer machines.
-- **No browser end-to-end test.** The slice is verified in layers (parser, HTTP, rendered page with a mocked API). Nothing drives a real browser against a running backend yet.
-- **Ingestion is manual.** `IngestionScheduler` is still a placeholder, so data is only as recent as the last `npm run ingest`.
-- **Failed samples are not shown.** Ingestion keeps the newest row that has a result. If DRNA's latest sample for a beach failed (as for 22 stations on 21 September 2026), the card shows the previous result with its older date and does not mention the failed sample.
-- **Ambiguous rows remain possible.** A row that has no result and an integer temperature (for example `Routine 30 8.17`) cannot be told apart from a result with a missing pH. No such row appears in the current PDF.
-- **Provenance is incomplete.** `source_published_at` is always null; `sourceUrl` points to the results PDF rather than the notification page; and `observedAt` is a date without a time.
-- **Notes can include noise.** Some rows repeat the pH reading (`8.12, 8.12`), and the repeat ends up in the notes. Station names also vary between publications, and the most recent name is used.
-- **Fixtures cover one publication.** If DRNA changes its PDF layout, the parser can only detect it at ingestion time: ingestion fails when more than 2% of rows are rejected.
-- **Water-quality card follow-ups:**
-  - the stale warning triggers after 48 hours, although DRNA samples about once a week;
-  - errors and unavailable data share the heading "Water quality unavailable";
-  - a failure to load the beach list is shown inside the water-quality card.
+- DRNA ingestion is scheduled at startup and every six hours while the backend server is running. `npm run ingest` remains available for a one-shot refresh; see [automatic DRNA ingestion](drna-scheduler.md).
+- Backend CI runs persistence coverage against an isolated PostgreSQL 16 service. A local run without the test database configuration skips guarded database suites; it does not indicate that CI skipped them.
+- Automated source tests use fixtures and do not call the live DRNA service. Frontend tests exercise the rendered page with a mocked API; there is no browser-driven full-stack test in this slice.
+- The parser fixtures represent the 25 September 2026 results publication. Add fixtures and review parser behavior when DRNA changes its PDF format.
+- See [NWS staleness and failure verification](nws-staleness-and-failure.md) for ocean-risk and alert freshness behavior, and [the PostgreSQL integration guide](postgres-integration.md) for isolated database tests.

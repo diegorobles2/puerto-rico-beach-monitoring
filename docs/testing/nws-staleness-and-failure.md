@@ -34,7 +34,7 @@ Coverage includes current and stale risk, missing timestamps, the exact freshnes
 
 ## Database-boundary verification
 
-The persistence integration suite is deliberately restricted to a local database named `beach_monitoring_test`; it is skipped otherwise. Create that local database, then apply migrations and run the suite with the same connection string:
+The persistence integration suite is deliberately restricted to a local database named `beach_monitoring_test`; a basic local test run skips it unless the guarded URL is configured. Backend CI provisions PostgreSQL 16, sets the test URL, applies migrations, and runs this suite. To run it locally, create an isolated test database, then apply migrations and run the suite with the same connection string:
 
 ```bash
 cd backend
@@ -52,4 +52,4 @@ $env:NWS_PERSISTENCE_TEST_DATABASE_URL=$env:DATABASE_URL
 npx jest --runInBand src/ingestion/nws-persistence.service.spec.ts
 ```
 
-Do not point this variable at production or a shared Supabase project. The persistence regression verifies that stored source URLs and observed/retrieved timestamps survive the database boundary, and that older snapshots cannot replace newer ones.
+Do not point this variable at production or a shared Supabase project. The persistence regression verifies that stored source URLs and observed/retrieved timestamps survive the database boundary, and that older snapshots cannot replace newer ones. The full local reproduction, including the separate migration-test database, is documented in [the PostgreSQL integration guide](postgres-integration.md).
