@@ -153,7 +153,7 @@ describe('BeachPage water quality', () => {
     }));
     render(<BeachPage />);
     await screen.findByText('Current rip-current risk: high');
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '8' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select beach' }), { target: { value: '8' } });
     expect(screen.queryByText('First beach forecast')).not.toBeInTheDocument();
     expect(screen.getByText('Loading ocean risk...')).toBeInTheDocument();
   });
