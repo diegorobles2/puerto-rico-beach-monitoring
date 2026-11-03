@@ -18,7 +18,14 @@ export class IngestionService implements OnModuleDestroy {
       const saved = await trx('beaches').insert(catalog.stations.map((station) => ({
         drna_station_id: station.stationId, name: station.name, municipality: station.municipality,
         latitude: station.latitude, longitude: station.longitude,
-      }))).onConflict('drna_station_id').merge(['name', 'latitude', 'longitude']).returning(['id', 'drna_station_id']);
+      }))).onConflict('drna_station_id').merge({
+        name: trx.raw('excluded.name'),
+        latitude: trx.raw('excluded.latitude'),
+        longitude: trx.raw('excluded.longitude'),
+        municipality: trx.raw(`case
+          when trim(excluded.municipality) <> '' and lower(trim(excluded.municipality)) <> 'unavailable'
+          then trim(excluded.municipality) else beaches.municipality end`),
+      }).returning(['id', 'drna_station_id']);
 
       const beachIds = new Map(saved.map((beach) => [beach.drna_station_id, beach.id]));
       const observations = catalog.observations.flatMap((observation) => {

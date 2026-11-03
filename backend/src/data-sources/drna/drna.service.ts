@@ -3,6 +3,7 @@ import { PDFParse } from 'pdf-parse';
 import type { WaterQualityObservation } from '../../types/domain';
 import { mapDrnaWaterQuality } from './drna.mapper';
 import type { DrnaCatalog, DrnaMonitoringRecord } from './drna.types';
+import { STATION_MUNICIPALITIES } from './station-municipalities';
 
 const ARCHIVE_URL =
   'https://www.drna.pr.gov/cat/programas-y-proyectos/monitoria-de-playas/notificaciones-ambientales/';
@@ -55,7 +56,7 @@ export class DrnaService {
       stations.set(record.beachId, {
         stationId: record.beachId,
         name: record.beachName,
-        municipality: inferMunicipality(record) ?? existing?.municipality ?? 'Unavailable',
+        municipality: STATION_MUNICIPALITIES[record.beachId.toUpperCase()] ?? inferMunicipality(record) ?? existing?.municipality ?? 'Unavailable',
         ...coordinates,
       });
       if (record.date && record.enterococcus && (!latest.has(record.beachId) || dateValue(record.date) >= dateValue(latest.get(record.beachId)!.date!))) {

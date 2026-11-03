@@ -87,7 +87,7 @@ describeDatabase('IngestionService database integration', () => {
     }));
   });
 
-  it('preserves existing municipalities during DRNA refresh', async () => {
+  it.each(['Unavailable', ' unavailable ', '', '   '])('preserves existing municipalities when incoming value is %j', async (incoming) => {
     await expectRollback(
       db.transaction(async (trx) => {
         // Establish an existing municipality.
@@ -105,7 +105,7 @@ describeDatabase('IngestionService database integration', () => {
           trx,
           observation,
           { rejectedRows: 0, sourceRows: 35 },
-          'Unavailable',
+          incoming,
         );
         await service.refresh();
 
@@ -119,6 +119,30 @@ describeDatabase('IngestionService database integration', () => {
         throw ROLLBACK;
       }),
     );
+  });
+
+  it.each(['Unavailable', '', 'Wrong municipality'])('repairs a stored municipality of %j from valid incoming metadata', async (previous) => {
+    await expectRollback(db.transaction(async (trx) => {
+      await trx('beaches').insert({ drna_station_id: 'RW-22', name: 'Pico de Piedra', municipality: previous })
+        .onConflict('drna_station_id').merge({ municipality: previous });
+      await makeService(trx, observation).refresh();
+      expect(await trx('beaches').where({ drna_station_id: 'RW-22' }).first('municipality'))
+        .toEqual({ municipality: 'Aguada' });
+      throw ROLLBACK;
+    }));
+  });
+
+  it('populates municipality on a fresh station import', async () => {
+    await expectRollback(db.transaction(async (trx) => {
+      const catalog = {
+        stations: [{ stationId: 'test-municipality-new', name: 'Test beach', municipality: 'Aguada', latitude: 18.38, longitude: -67.21 }],
+        observations: [], sourceRows: 1, rejectedRows: 0,
+      };
+      await new IngestionService({ getCatalog: async () => catalog } as never, trx).refresh();
+      expect(await trx('beaches').where({ drna_station_id: 'test-municipality-new' }).first('municipality'))
+        .toEqual({ municipality: 'Aguada' });
+      throw ROLLBACK;
+    }));
   });
 });
 
