@@ -14,15 +14,7 @@ export class NwsIngestionService {
 
     try {
       const condition = await this.nws.getConditions(zoneId);
-
       await this.persistence.saveCondition(condition);
-
-      await this.persistence.recordRetrieval(
-        'conditions',
-        zoneId,
-        true,
-        attemptedAt,
-      );
     } catch (error) {
       await this.persistence.recordRetrieval(
         'conditions',
@@ -30,9 +22,15 @@ export class NwsIngestionService {
         false,
         attemptedAt,
       );
-
       throw error;
     }
+
+    await this.persistence.recordRetrieval(
+      'conditions',
+      zoneId,
+      true,
+      attemptedAt,
+    );
   }
 
   async refreshAlerts(zoneId: string): Promise<void> {
@@ -40,19 +38,7 @@ export class NwsIngestionService {
 
     try {
       const alerts = await this.nws.getActiveAlerts(zoneId);
-
-      await this.persistence.saveAlerts(
-        zoneId,
-        alerts,
-        attemptedAt,
-      );
-
-      await this.persistence.recordRetrieval(
-        'alerts',
-        zoneId,
-        true,
-        attemptedAt,
-      );
+      await this.persistence.saveAlerts(zoneId, alerts, attemptedAt);
     } catch (error) {
       await this.persistence.recordRetrieval(
         'alerts',
@@ -60,9 +46,15 @@ export class NwsIngestionService {
         false,
         attemptedAt,
       );
-
       throw error;
     }
+
+    await this.persistence.recordRetrieval(
+      'alerts',
+      zoneId,
+      true,
+      attemptedAt,
+    );
   }
 
   async refreshZones(zoneIds: string[]): Promise<{ attempted: number; failed: number }> {

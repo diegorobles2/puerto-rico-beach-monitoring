@@ -135,4 +135,26 @@ describe('NwsIngestionService', () => {
     expect(persistence.recordRetrieval).toHaveBeenCalledWith('conditions', 'PRZ001', false, expect.any(String));
     expect(persistence.recordRetrieval).toHaveBeenCalledWith('alerts', 'PRZ002', true, expect.any(String));
   });
+
+  it('does not record a failed retrieval when success-history persistence fails', async () => {
+    const condition = { zoneId: 'PRZ001' };
+    const historyError = new Error('History insert failed');
+
+    nws.getConditions.mockResolvedValue(condition);
+    persistence.saveCondition.mockResolvedValue(undefined);
+    persistence.recordRetrieval.mockRejectedValueOnce(historyError);
+
+    await expect(
+      service.refreshConditions('PRZ001'),
+    ).rejects.toThrow('History insert failed');
+
+    expect(persistence.saveCondition).toHaveBeenCalledWith(condition);
+    expect(persistence.recordRetrieval).toHaveBeenCalledTimes(1);
+    expect(persistence.recordRetrieval).toHaveBeenCalledWith(
+      'conditions',
+      'PRZ001',
+      true,
+      expect.any(String),
+    );
+  });
 });

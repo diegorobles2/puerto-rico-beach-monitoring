@@ -8,6 +8,7 @@ describe('IngestionScheduler', () => {
   let query: jest.Mock;
   let refreshZones: jest.Mock;
   let refreshDrna: jest.Mock;
+  let historyInsert: jest.Mock;
   const originalNwsEnabled = process.env.NWS_SCHEDULER_ENABLED;
   const originalDrnaEnabled = process.env.DRNA_SCHEDULER_ENABLED;
 
@@ -18,8 +19,21 @@ describe('IngestionScheduler', () => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    query = jest.fn().mockResolvedValue([{ nws_forecast_zone: 'PRZ001' }]);
-    const db = jest.fn(() => ({ distinct: () => ({ whereNotNull: query }) }));
+    query = jest.fn().mockResolvedValue([
+      { nws_forecast_zone: 'PRZ001' },
+    ]);
+
+    historyInsert = jest.fn().mockResolvedValue(undefined);
+
+    const db = jest.fn((table: string) => {
+      if (table === 'source_refresh_history') {
+        return { insert: historyInsert };
+      }
+
+      return {
+        distinct: () => ({ whereNotNull: query }),
+      };
+    });
     refreshZones = jest.fn().mockResolvedValue({ attempted: 2, failed: 0 });
     refreshDrna = jest.fn().mockResolvedValue(undefined);
     scheduler = new IngestionScheduler(db as never, { refreshZones } as unknown as NwsIngestionService, { refresh: refreshDrna } as unknown as IngestionService);
@@ -137,5 +151,59 @@ describe('IngestionScheduler', () => {
     scheduler.start();
     await jest.advanceTimersByTimeAsync(DRNA_REFRESH_INTERVAL_MS);
     expect(refreshDrna).toHaveBeenCalledTimes(2);
+  });
+
+  it('records successful DRNA scheduled refreshes', async () => {
+    await scheduler.tickDrna();
+
+    expect(historyInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'drna',
+        source_key: 'scheduled-run',
+        succeeded: true,
+        zone_id: null,
+      }),
+    );
+  });
+
+  it('records failed DRNA scheduled refreshes', async () => {
+    refreshDrna.mockRejectedValueOnce(new Error('DRNA unavailable'));
+
+    await scheduler.tickDrna();
+
+    expect(historyInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'drna',
+        succeeded: false,
+      }),
+    );
+  });
+
+  it('records partial NWS refresh failures', async () => {
+    refreshZones.mockResolvedValueOnce({
+      attempted: 4,
+      failed: 1,
+    });
+
+    await scheduler.tick();
+
+    expect(historyInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'nws',
+        source_key: 'scheduled-run',
+        succeeded: false,
+      }),
+    );
+  });
+
+  it('continues scheduling when history persistence fails', async () => {
+    historyInsert.mockRejectedValueOnce(new Error('Database unavailable'));
+
+    await expect(scheduler.tickDrna()).resolves.toBeUndefined();
+
+    await scheduler.tickDrna();
+
+    expect(refreshDrna).toHaveBeenCalledTimes(2);
+    expect(historyInsert).toHaveBeenCalledTimes(2);
   });
 });
