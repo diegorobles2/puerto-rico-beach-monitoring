@@ -47,12 +47,16 @@ All other rows parsed identically before and after the fix.
 
 ## Running the tests
 
-```bash
-cd backend; npm test
-cd frontend; npm test
-```
+For the full backend suite, follow [the isolated PostgreSQL integration guide](postgres-integration.md). Do not run unrestricted backend tests with the application's Supabase connection: `ingestion.service.spec.ts` loads `backend/.env` and runs whenever `DATABASE_URL` exists. Unlike the NWS suites, it does not enforce a local database guard. Its transactions roll back, but still perform writes and take locks. Backend CI supplies a disposable PostgreSQL 16 database.
 
-The persistence integration test in `backend/src/ingestion/ingestion.service.spec.ts` requires `DATABASE_URL`. It is skipped in a basic local run when no database is configured; backend CI supplies an isolated PostgreSQL 16 database and runs it. See [the PostgreSQL integration guide](postgres-integration.md).
+To check the parser, API, and frontend with mocked data instead, run these explicitly selected suites from the repository root:
+
+```bash
+cd backend
+npx jest --runInBand src/data-sources/drna src/conditions/conditions.service.spec.ts src/conditions/conditions.controller.spec.ts src/conditions/conditions.http.spec.ts
+cd ../frontend
+npm test
+```
 
 ## Continuous integration
 
@@ -93,7 +97,13 @@ Prerequisites: `DATABASE_URL` in `backend/.env`.
 ## Current limitations and related workflows
 
 - DRNA ingestion is scheduled at startup and every six hours while the backend server is running. `npm run ingest` remains available for a one-shot refresh; see [automatic DRNA ingestion](drna-scheduler.md).
-- Backend CI runs persistence coverage against an isolated PostgreSQL 16 service. A local run without the test database configuration skips guarded database suites; it does not indicate that CI skipped them.
+- Backend CI runs persistence coverage against an isolated PostgreSQL 16 service. Locally, only the NWS suites enforce host/database-name guards; DRNA integration tests run whenever `DATABASE_URL` is set, including through `.env`. Use the isolated test guide for the full suite.
 - Automated source tests use fixtures and do not call the live DRNA service. Frontend tests exercise the rendered page with a mocked API; there is no browser-driven full-stack test in this slice.
 - The parser fixtures represent the 25 September 2026 results publication. Add fixtures and review parser behavior when DRNA changes its PDF format.
+- **Unsuccessful samples are not displayed.** Ingestion selects the newest row with an Enterococcus result. If a later sample was not analyzed, the card can show an older result without explaining the unsuccessful sample.
+- **The water-quality stale warning uses 48 hours.** This is a frontend threshold based on the sample date, not a verified DRNA publication schedule. A six-hour retrieval does not make an old laboratory sample current; the threshold still needs review.
+- **Publication provenance is incomplete.** `source_published_at` remains null; the source link points to the results PDF, and `observedAt` contains the sample date without a time.
+- **Some PDF rows remain ambiguous.** A row without an Enterococcus result but with an integer temperature can be indistinguishable from a result with a missing pH. Existing fixtures do not establish that every future layout is unambiguous.
+- **Names and notes can contain source noise.** Names vary between publications; repeated pH text can remain in notes.
+- **Water-quality UI errors are not fully differentiated.** Request errors and missing data share the unavailable heading; a beach-list request failure is displayed in the water-quality card.
 - See [NWS staleness and failure verification](nws-staleness-and-failure.md) for ocean-risk and alert freshness behavior, and [the PostgreSQL integration guide](postgres-integration.md) for isolated database tests.

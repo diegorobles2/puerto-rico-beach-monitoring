@@ -203,19 +203,20 @@ npx vitest run src/components/status/NwsCards.test.tsx src/pages/BeachPage.test.
 
 ## Tests and CI
 
-Run the application builds and tests locally:
+Run the application builds and frontend tests locally, from the repository root:
 
 ```bash
 cd backend
 npm ci
 npm run build
-npm test -- --runInBand
 cd ../frontend
 npm ci
 npm run build
 npm test
 ```
 
-Backend CI provisions PostgreSQL 16, creates the Supabase-compatible roles and a separate empty migration-test database, applies migrations, then runs the full backend suite. Frontend CI runs its build and tests. The database integration tests are optional in a basic local run and skip unless their guarded local database URLs are configured; CI runs them against disposable PostgreSQL databases. Never point integration-test variables at Supabase or another shared database. Follow [the isolated PostgreSQL test guide](docs/testing/postgres-integration.md) to reproduce the CI database setup locally.
+For the **full backend test suite**, follow [the isolated PostgreSQL test guide](docs/testing/postgres-integration.md) first. It creates disposable databases, supplies their connection URLs, applies migrations, and runs all tests. Do not run an unrestricted backend `npm test` or `npx jest` using the application Supabase configuration: the DRNA ingestion suite loads `backend/.env` and runs database-writing tests whenever `DATABASE_URL` is set. Its test transactions roll back, but they still write and acquire locks. Only the NWS database suites enforce the local host/database-name guards.
+
+The focused state-verification command above selects mocked backend suites and does not run the database integration suites. Backend CI provisions PostgreSQL 16, creates the Supabase-compatible roles and a separate empty migration-test database, applies migrations, then runs the full backend suite. Frontend CI runs its build and tests. No database test should target Supabase or another shared application database.
 
 More details: [testing index](docs/testing/README.md), [DRNA water-quality verification](docs/testing/drna-water-quality-slice.md), and [API architecture](docs/architecture/README.md).

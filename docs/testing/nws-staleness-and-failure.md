@@ -22,13 +22,7 @@ cd backend
 npx jest --runInBand src/data-sources/nws src/ingestion/nws-ingestion.service.spec.ts src/conditions/nws-conditions.service.spec.ts src/conditions/nws-conditions.http.spec.ts
 ```
 
-Run the documented backend regression gate:
-
-```bash
-cd backend
-npx jest --runInBand
-npm run build
-```
+For the full backend regression gate, use [the isolated PostgreSQL integration guide](postgres-integration.md), including database setup and environment variables, before running the full suite and build. Do not run unrestricted backend tests using the application's Supabase `.env`: the DRNA ingestion suite also runs when `DATABASE_URL` is present and does not enforce the NWS local-database guards. The focused command above runs mocked suites only.
 
 Coverage includes current and stale risk, missing timestamps, the exact freshness boundary, current and stale empty alert checks, stale last-known values through HTTP, failed-refresh behavior, expired-alert filtering, timeout, HTTP errors, malformed JSON/payloads, and source URL/timestamp preservation. The HTTP tests exercise Nest controllers with Supertest. The adapter tests use local fixtures and mocked fetchers.
 
