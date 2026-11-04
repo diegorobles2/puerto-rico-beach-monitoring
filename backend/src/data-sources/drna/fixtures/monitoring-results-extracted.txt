@@ -1,0 +1,6 @@
+# Source: DRNA monitoring results PDF published September 25, 2026
+# Columns are pipe-separated. Empty fields represent values absent from the source row.
+date|beach_id|beach_name|latitude|longitude|sampling_route|sampling_type|enterococcus|temperature_c|ph|observations
+2023-01-23|RW-22|Pico de Piedra|18.3843639|-67.2129889|Route 5: Añasco - Aguadilla|Routine|20|25.30|8.26|
+2023-01-24|RW-25A|Playa Sixto Escobar|18.4667306|-66.0866667|Route 1: Dorado - Loíza|Routine|<10|25.80|8.16|
+2023-01-30|RW-16|Balneario Crash Boat|||Route 5: Añasco - Aguadilla|Re-Sampling|10|25.00||Re-sampling

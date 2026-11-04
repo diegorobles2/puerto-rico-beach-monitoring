@@ -1,6 +1,6 @@
-import { HomePage } from './pages/HomePage';
+import { BeachPage } from './pages/BeachPage';
 
 export default function App() {
-  return <HomePage />;
+  return <BeachPage />;
 }
 
