@@ -6,5 +6,6 @@ import { DatabaseModule } from './database/database.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { ReportsModule } from './reports/reports.module';
 import { SourceHealthModule } from './source-health/source-health.module';
-@Module({ imports: [DatabaseModule, BeachesModule, ConditionsModule, ReportsModule, DataSourcesModule, IngestionModule, SourceHealthModule] })
+import { HealthController } from './health/health.controller';
+@Module({ imports: [DatabaseModule, BeachesModule, ConditionsModule, ReportsModule, DataSourcesModule, IngestionModule, SourceHealthModule], controllers: [HealthController] })
 export class AppModule {}

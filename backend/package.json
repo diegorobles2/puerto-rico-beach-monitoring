@@ -11,8 +11,11 @@
     "ingest:nws": "ts-node src/ingestion/run-nws-ingestion.ts",
     "map:nws": "ts-node src/ingestion/run-nws-mapping.ts",
     "start": "nest start",
+    "start:prod": "node dist/main.js",
     "start:dev": "nest start --watch",
-    "test": "jest"
+    "test": "jest",
+    "test:load": "k6 run ../tests/load/beaches.js",
+    "seed:load": "ts-node src/database/seed-load-test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
