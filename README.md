@@ -83,6 +83,9 @@ One-shot commands remain available: `npm run ingest` refreshes DRNA, `npm run ma
 
 ## Run the application
 
+For production images, isolated local Compose startup, health checks, HTTPS and
+scheduler configuration, see [deployment setup](docs/deployment.md).
+
 Start the backend in one terminal:
 
 ```bash

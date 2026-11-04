@@ -1,0 +1,65 @@
+# Local deployment rehearsal only; never points at the application's Supabase DB.
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql://postgres:local-development-only@db:5432/beach_monitoring
+  FRONTEND_URL: http://localhost:8080
+  NWS_SCHEDULER_ENABLED: ${NWS_SCHEDULER_ENABLED:-false}
+  DRNA_SCHEDULER_ENABLED: ${DRNA_SCHEDULER_ENABLED:-false}
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    environment:
+      POSTGRES_DB: beach_monitoring
+      POSTGRES_PASSWORD: local-development-only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres-init.sql:/docker-entrypoint-initdb.d/roles.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d beach_monitoring']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tools:
+    profiles: [tools]
+    build:
+      context: ./backend
+      target: tools
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [npm, run, 'db:migrate']
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      <<: *backend-environment
+      PORT: 3000
+    init: true
+    ports: ['127.0.0.1:3000:3000']
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health/ready', {signal: AbortSignal.timeout(8000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports: ['127.0.0.1:8080:8080']
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, --spider, -q, 'http://127.0.0.1:8080/']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
