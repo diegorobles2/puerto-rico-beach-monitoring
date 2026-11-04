@@ -3,6 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { WaterQualityCard } from './WaterQualityCard';
 
 describe('WaterQualityCard', () => {
+  it('warns about an old retained sample even when it was recently retrieved', () => {
+    render(<WaterQualityCard condition={{
+      status: 'advisory', source: 'DRNA', observedAt: '2000-01-01',
+      retrievedAt: new Date().toISOString(), availability: 'available', enterococcusValue: 231,
+    }} />);
+    expect(screen.getByText(/Stale data: this reading/)).toBeInTheDocument();
+    expect(screen.getByText('Observed').nextElementSibling).toHaveTextContent('2000-01-01');
+    expect(screen.getByText('231 colonies/100 mL')).toBeInTheDocument();
+    expect(screen.queryByText(/currently suitable/i)).not.toBeInTheDocument();
+  });
   it('renders the current water quality state and provenance', () => {
     render(
       <WaterQualityCard

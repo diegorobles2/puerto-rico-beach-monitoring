@@ -7,6 +7,8 @@ build/
 coverage/
 *.tsbuildinfo
 *.log
+tests/load/results/*
+!tests/load/results/.gitkeep
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
