@@ -29,6 +29,7 @@ describe('SourceHealthService', () => {
   it('returns nulls with no history and filters both sources to scheduled runs', async () => {
     const empty = {
       lastAttemptAt: null, lastAttemptSucceeded: null, lastSuccessAt: null, state: 'no-history',
+      executionFreshness: 'unknown', lastPublishedAt: null, publicationFreshness: 'unknown',
     };
     expect(await service.getStatus()).toEqual({ nws: empty, drna: empty });
     expect(db).toHaveBeenCalledTimes(4);
@@ -48,6 +49,7 @@ describe('SourceHealthService', () => {
       expect(status).toEqual({
         lastAttemptAt: recent.toISOString(), lastAttemptSucceeded: true,
         lastSuccessAt: recent.toISOString(), state: 'succeeded',
+        executionFreshness: 'current', lastPublishedAt: null, publicationFreshness: 'unknown',
       });
     }
   });
@@ -86,5 +88,33 @@ describe('SourceHealthService', () => {
   it('propagates database query failures', async () => {
     first.mockRejectedValueOnce(new Error('database unavailable'));
     await expect(service.getStatus()).rejects.toThrow('database unavailable');
+  });
+
+  it('distinguishes recent failed retrieval from missing execution and old publication', async () => {
+    first.mockResolvedValueOnce({ started_at: recent, succeeded: false })
+      .mockResolvedValueOnce({ started_at: recent, published_at: '2026-10-30T00:00:00Z' });
+    expect((await service.getStatus()).nws).toMatchObject({
+      state: 'failed', executionFreshness: 'current', publicationFreshness: 'stale',
+      lastPublishedAt: '2026-10-30T00:00:00.000Z',
+    });
+  });
+
+  it('marks an old failed execution overdue even without a prior success', async () => {
+    first.mockResolvedValueOnce({ started_at: '2026-11-01T00:00:00Z', succeeded: false });
+    expect((await service.getStatus()).nws).toMatchObject({
+      state: 'failed', executionFreshness: 'overdue', publicationFreshness: 'unknown',
+    });
+  });
+
+  it.each([
+    ['2026-11-01T00:00:00Z', 'current'],
+    ['2026-10-31T23:59:59.999Z', 'stale'],
+    [null, 'unknown'], ['invalid', 'unknown'], ['2026-11-03T00:00:00Z', 'unknown'],
+  ])('classifies NWS issuance %s independently from retrieval', async (published_at, publicationFreshness) => {
+    first.mockResolvedValueOnce({ started_at: recent, succeeded: true })
+      .mockResolvedValueOnce({ started_at: recent, published_at });
+    expect((await service.getStatus()).nws).toMatchObject({
+      state: 'succeeded', executionFreshness: 'current', publicationFreshness,
+    });
   });
 });

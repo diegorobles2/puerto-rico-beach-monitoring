@@ -4,8 +4,8 @@ import { DATABASE } from '../database/database.module';
 import { NwsIngestionService } from './nws-ingestion.service';
 import { IngestionService } from './ingestion.service';
 
-export const NWS_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
-export const DRNA_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+import { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from './refresh-intervals';
+export { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from './refresh-intervals';
 
 @Injectable()
 export class IngestionScheduler implements OnModuleDestroy {
@@ -66,6 +66,7 @@ export class IngestionScheduler implements OnModuleDestroy {
     this.running = true;
     const startedAt = new Date().toISOString();
     let succeeded = false;
+    let publishedAt: string | null = null;
 
     try {
       const zones = await this.db('beaches')
@@ -76,7 +77,9 @@ export class IngestionScheduler implements OnModuleDestroy {
         zones.map((row) => row.nws_forecast_zone),
       );
 
-      succeeded = result.failed === 0;
+      succeeded = result.attempted > 0 && result.failed === 0;
+      publishedAt = succeeded ? result.publishedAt ?? null : null;
+      if (result.attempted === 0) this.logger.warn('NWS refresh skipped: no mapped zones');
 
       this.logger.log(
         `NWS refresh: ${result.attempted - result.failed}/${result.attempted} requests saved`,
@@ -90,7 +93,7 @@ export class IngestionScheduler implements OnModuleDestroy {
         'NWS refresh failed; retrying on the next scheduled tick',
       );
     } finally {
-      await this.recordScheduledRun('nws', startedAt, succeeded);
+      await this.recordScheduledRun('nws', startedAt, succeeded, publishedAt);
       this.running = false;
     }
   }
@@ -106,6 +109,7 @@ export class IngestionScheduler implements OnModuleDestroy {
     source: 'nws' | 'drna',
     startedAt: string,
     succeeded: boolean,
+    publishedAt: string | null = null,
   ): Promise<void> {
     const finishedAt = new Date();
 
@@ -121,7 +125,7 @@ export class IngestionScheduler implements OnModuleDestroy {
           0,
           finishedAt.getTime() - new Date(startedAt).getTime(),
         ),
-        published_at: null,
+        published_at: publishedAt,
       });
     } catch {
       this.logger.error(`Unable to persist ${source} refresh history`);

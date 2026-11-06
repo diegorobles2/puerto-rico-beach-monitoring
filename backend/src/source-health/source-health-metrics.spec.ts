@@ -18,6 +18,7 @@ describe('seven-day source-health metrics', () => {
     expect(report.metrics[0]).toEqual({
       source: 'drna', totalAttempts: 3, successfulAttempts: 2, failedAttempts: 1,
       successPercentage: 66.67, averageDurationMs: 150,
+      expectedRuns: 28, coveredSlots: 2, missingRuns: 26, scheduleCoveragePercentage: 7.14,
       lastAttemptAt: '2026-11-02T12:00:00.000Z', lastSuccessAt: '2026-11-02T12:00:00.000Z',
     });
     expect(report.metrics[1]).toMatchObject({ source: 'nws', totalAttempts: 1, successPercentage: 100, averageDurationMs: 0 });
@@ -48,7 +49,7 @@ describe('seven-day source-health metrics', () => {
       successPercentage: null, averageDurationMs: null, lastAttemptAt: null, lastSuccessAt: null,
     });
     expect(aggregateMetrics([], reference)).toEqual(report);
-    expect(formatMetrics(report, 'csv').split('\n')[1]).toBe('2026-10-27T12:00:00.000Z,2026-11-03T12:00:00.000Z,drna,0,0,0,,,,');
+    expect(formatMetrics(report, 'csv').split('\n')[1]).toBe('2026-10-27T12:00:00.000Z,2026-11-03T12:00:00.000Z,drna,0,0,0,,,,,28,0,28,0.00');
   });
 
   it('ignores missing/invalid durations while retaining attempts and latest failure', () => {
@@ -70,9 +71,9 @@ describe('seven-day source-health metrics', () => {
     expect(formatMetrics(report, 'json')).toBe(formatMetrics(reversed, 'json'));
     expect(formatMetrics(report, 'csv')).toBe(formatMetrics(reversed, 'csv'));
     expect(formatMetrics(report, 'csv')).toBe([
-      'windowStart,windowEnd,source,totalAttempts,successfulAttempts,failedAttempts,successPercentage,averageDurationMs,lastAttemptAt,lastSuccessAt',
-      '2026-10-27T12:00:00.000Z,2026-11-03T12:00:00.000Z,drna,3,2,1,66.67,1.67,2026-11-02T12:00:00.000Z,2026-11-02T12:00:00.000Z',
-      '2026-10-27T12:00:00.000Z,2026-11-03T12:00:00.000Z,nws,0,0,0,,,,', '',
+      'windowStart,windowEnd,source,totalAttempts,successfulAttempts,failedAttempts,successPercentage,averageDurationMs,lastAttemptAt,lastSuccessAt,expectedRuns,coveredSlots,missingRuns,scheduleCoveragePercentage',
+      '2026-10-27T12:00:00.000Z,2026-11-03T12:00:00.000Z,drna,3,2,1,66.67,1.67,2026-11-02T12:00:00.000Z,2026-11-02T12:00:00.000Z,28,1,27,3.57',
+      '2026-10-27T12:00:00.000Z,2026-11-03T12:00:00.000Z,nws,0,0,0,,,,,336,0,336,0.00', '',
     ].join('\n'));
   });
 
@@ -96,5 +97,30 @@ describe('seven-day source-health metrics', () => {
 
   it('rejects invalid reference dates', () => {
     expect(() => aggregateMetrics([], new Date('invalid'))).toThrow('Invalid reference timestamp');
+  });
+
+  it('shows a week of missed NWS slots even when the only attempt succeeded', () => {
+    const metric = aggregateMetrics([row({ source: 'nws' })], reference).metrics[1];
+    expect(metric).toMatchObject({ successPercentage: 100, expectedRuns: 336,
+      coveredSlots: 1, missingRuns: 335, scheduleCoveragePercentage: 0.30 });
+  });
+
+  it('does not let restart bursts hide missing slots and includes failed slots as executed', () => {
+    const metric = aggregateMetrics([
+      row({ source: 'nws', started_at: '2026-10-27T12:00:00Z' }),
+      row({ source: 'nws', started_at: '2026-10-27T12:01:00Z' }),
+      row({ source: 'nws', started_at: '2026-10-27T12:30:00Z', succeeded: false }),
+    ], reference).metrics[1];
+    expect(metric).toMatchObject({ totalAttempts: 3, coveredSlots: 2, missingRuns: 334 });
+  });
+
+  it('reports full coverage when each NWS slot contains an attempt', () => {
+    const start = Date.parse(reportingWindow(reference).windowStart);
+    const rows = Array.from({ length: 336 }, (_, slot) => row({
+      source: 'nws', started_at: new Date(start + slot * 30 * 60 * 1000),
+    }));
+    expect(aggregateMetrics(rows, reference).metrics[1]).toMatchObject({
+      expectedRuns: 336, coveredSlots: 336, missingRuns: 0, scheduleCoveragePercentage: 100,
+    });
   });
 });

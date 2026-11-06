@@ -1,0 +1,2 @@
+export const NWS_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+export const DRNA_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;

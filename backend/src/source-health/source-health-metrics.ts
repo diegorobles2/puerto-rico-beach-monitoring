@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from '../ingestion/refresh-intervals';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const SOURCES = ['drna', 'nws'] as const;
@@ -30,6 +31,10 @@ export function aggregateMetrics(rows: RefreshHistoryRow[], reference = new Date
         && time >= start && time < end;
     });
     const successes = attempts.filter((row) => row.succeeded);
+    const interval = source === 'nws' ? NWS_REFRESH_INTERVAL_MS : DRNA_REFRESH_INTERVAL_MS;
+    const expectedRuns = WEEK_MS / interval;
+    const coveredSlots = new Set(attempts.map(row =>
+      Math.floor((new Date(row.started_at!).getTime() - start) / interval))).size;
     const durations = attempts.map((row) => row.duration_ms)
       .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0);
     const latest = (entries: RefreshHistoryRow[]) => entries.length
@@ -41,6 +46,10 @@ export function aggregateMetrics(rows: RefreshHistoryRow[], reference = new Date
       totalAttempts: attempts.length,
       successfulAttempts: successes.length,
       failedAttempts: attempts.length - successes.length,
+      expectedRuns,
+      coveredSlots,
+      missingRuns: expectedRuns - coveredSlots,
+      scheduleCoveragePercentage: round(100 * coveredSlots / expectedRuns),
       successPercentage: attempts.length ? round(successes.length / attempts.length * 100) : null,
       averageDurationMs: durations.length ? round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : null,
       lastAttemptAt: latest(attempts),
@@ -63,12 +72,13 @@ export async function queryMetrics(db: Knex, reference = new Date()) {
 
 export function formatMetrics(report: ReturnType<typeof aggregateMetrics>, format: 'json' | 'csv') {
   if (format === 'json') return JSON.stringify(report, null, 2) + '\n';
-  const header = 'windowStart,windowEnd,source,totalAttempts,successfulAttempts,failedAttempts,successPercentage,averageDurationMs,lastAttemptAt,lastSuccessAt';
+  const header = 'windowStart,windowEnd,source,totalAttempts,successfulAttempts,failedAttempts,successPercentage,averageDurationMs,lastAttemptAt,lastSuccessAt,expectedRuns,coveredSlots,missingRuns,scheduleCoveragePercentage';
   const rows = report.metrics.map((metric) => [
     report.windowStart, report.windowEnd, metric.source,
     metric.totalAttempts, metric.successfulAttempts, metric.failedAttempts,
     metric.successPercentage?.toFixed(2) ?? '', metric.averageDurationMs?.toFixed(2) ?? '',
     metric.lastAttemptAt ?? '', metric.lastSuccessAt ?? '',
+    metric.expectedRuns, metric.coveredSlots, metric.missingRuns, metric.scheduleCoveragePercentage.toFixed(2),
   ].join(','));
   return [header, ...rows].join('\n') + '\n';
 }

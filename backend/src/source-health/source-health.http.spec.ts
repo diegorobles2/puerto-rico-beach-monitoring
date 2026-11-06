@@ -10,6 +10,7 @@ interface Attempt {
   source_key: string;
   started_at: Date | string;
   succeeded: boolean;
+  published_at?: string;
 }
 
 describe('Source health through the registered application API', () => {
@@ -18,7 +19,8 @@ describe('Source health through the registered application API', () => {
   let queryError: Error | undefined;
   const now = Date.parse('2026-11-05T12:00:00Z');
   const recent = '2026-11-05T11:50:00.000Z';
-  const empty = { lastAttemptAt: null, lastAttemptSucceeded: null, lastSuccessAt: null, state: 'no-history' };
+  const publication = { lastPublishedAt: null, publicationFreshness: 'unknown' };
+  const empty = { ...publication, executionFreshness: 'unknown', lastAttemptAt: null, lastAttemptSucceeded: null, lastSuccessAt: null, state: 'no-history' };
   const timeout = jest.fn();
   const raw = jest.fn(() => ({ timeout }));
   const db = Object.assign(jest.fn((table: string) => {
@@ -60,7 +62,7 @@ describe('Source health through the registered application API', () => {
   it('returns successful persisted histories with exact fields and UTC timestamps', async () => {
     add('nws', new Date(recent));
     add('drna', '2026-11-05T07:50:00-04:00');
-    const expected = { lastAttemptAt: recent, lastAttemptSucceeded: true, lastSuccessAt: recent, state: 'succeeded' };
+    const expected = { ...publication, executionFreshness: 'current', lastAttemptAt: recent, lastAttemptSucceeded: true, lastSuccessAt: recent, state: 'succeeded' };
     await request(app.getHttpServer()).get('/health/sources').expect(200, { nws: expected, drna: expected });
     expect(db).toHaveBeenCalledTimes(4);
   });
@@ -70,8 +72,18 @@ describe('Source health through the registered application API', () => {
       add(source, '2026-11-05T11:30:00Z');
       add(source, recent, false);
     }
-    const expected = { lastAttemptAt: recent, lastAttemptSucceeded: false, lastSuccessAt: '2026-11-05T11:30:00.000Z', state: 'failed' };
+    const expected = { ...publication, executionFreshness: 'current', lastAttemptAt: recent, lastAttemptSucceeded: false, lastSuccessAt: '2026-11-05T11:30:00.000Z', state: 'failed' };
     await request(app.getHttpServer()).get('/health/sources').expect(200, { nws: expected, drna: expected });
+  });
+
+  it('separates successful execution from old forecast issuance through HTTP', async () => {
+    add('nws');
+    rows[0].published_at = '2026-11-01T12:00:00Z';
+    const response = await request(app.getHttpServer()).get('/health/sources').expect(200);
+    expect(response.body.nws).toMatchObject({
+      state: 'succeeded', executionFreshness: 'current',
+      publicationFreshness: 'stale', lastPublishedAt: '2026-11-01T12:00:00.000Z',
+    });
   });
 
   it.each([
@@ -91,7 +103,7 @@ describe('Source health through the registered application API', () => {
     add('nws', '2026-11-05T10:00:00Z');
     add('nws', recent, false);
     const response = await request(app.getHttpServer()).get('/health/sources').expect(200);
-    expect(response.body.nws).toEqual({ lastAttemptAt: recent, lastAttemptSucceeded: false, lastSuccessAt: '2026-11-05T10:00:00.000Z', state: 'stale' });
+    expect(response.body.nws).toEqual({ ...publication, executionFreshness: 'current', lastAttemptAt: recent, lastAttemptSucceeded: false, lastSuccessAt: '2026-11-05T10:00:00.000Z', state: 'stale' });
     expect(response.body.drna).toEqual(empty);
   });
 
@@ -105,7 +117,7 @@ describe('Source health through the registered application API', () => {
     add('drna', recent, false);
     await request(app.getHttpServer()).get('/health/sources').expect(200, {
       nws: empty,
-      drna: { lastAttemptAt: recent, lastAttemptSucceeded: false, lastSuccessAt: null, state: 'failed' },
+      drna: { ...publication, executionFreshness: 'current', lastAttemptAt: recent, lastAttemptSucceeded: false, lastSuccessAt: null, state: 'failed' },
     });
   });
 

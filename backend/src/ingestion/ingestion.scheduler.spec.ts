@@ -196,6 +196,26 @@ describe('IngestionScheduler', () => {
     );
   });
 
+  it('does not record success when there are no mapped NWS zones', async () => {
+    query.mockResolvedValueOnce([]);
+    refreshZones.mockResolvedValueOnce({ attempted: 0, failed: 0, publishedAt: null });
+    await scheduler.tick();
+    expect(historyInsert).toHaveBeenCalledWith(expect.objectContaining({
+      source: 'nws', succeeded: false, published_at: null,
+    }));
+    expect(Logger.prototype.warn).toHaveBeenCalledWith('NWS refresh skipped: no mapped zones');
+  });
+
+  it('persists forecast publication metadata only for successful NWS runs', async () => {
+    const publishedAt = '2026-11-05T09:00:00.000Z';
+    refreshZones.mockResolvedValueOnce({ attempted: 2, failed: 0, publishedAt });
+    await scheduler.tick();
+    expect(historyInsert).toHaveBeenLastCalledWith(expect.objectContaining({ published_at: publishedAt, succeeded: true }));
+    refreshZones.mockResolvedValueOnce({ attempted: 2, failed: 1, publishedAt });
+    await scheduler.tick();
+    expect(historyInsert).toHaveBeenLastCalledWith(expect.objectContaining({ published_at: null, succeeded: false }));
+  });
+
   it('continues scheduling when history persistence fails', async () => {
     historyInsert.mockRejectedValueOnce(new Error('Database unavailable'));
 

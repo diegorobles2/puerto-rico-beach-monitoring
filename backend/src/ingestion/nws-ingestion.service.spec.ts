@@ -115,7 +115,7 @@ describe('NwsIngestionService', () => {
     const alerts = jest.spyOn(service, 'refreshAlerts').mockResolvedValue(undefined);
 
     await expect(service.refreshZones(['PRZ001', 'PRZ001', 'PRZ002']))
-      .resolves.toEqual({ attempted: 4, failed: 2 });
+      .resolves.toEqual({ attempted: 4, failed: 2, publishedAt: null });
     expect(conditions).toHaveBeenCalledTimes(2);
     expect(alerts).toHaveBeenCalledTimes(2);
   });
@@ -127,7 +127,7 @@ describe('NwsIngestionService', () => {
     nws.getConditions.mockRejectedValueOnce(new Error('timeout')).mockResolvedValueOnce(condition);
     nws.getActiveAlerts.mockResolvedValue([]);
 
-    await expect(service.refreshZones(['PRZ001', 'PRZ002'])).resolves.toEqual({ attempted: 4, failed: 1 });
+    await expect(service.refreshZones(['PRZ001', 'PRZ002'])).resolves.toEqual({ attempted: 4, failed: 1, publishedAt: null });
 
     expect(persistence.saveCondition).toHaveBeenCalledTimes(1);
     expect(persistence.saveCondition).toHaveBeenCalledWith(condition);
@@ -156,5 +156,28 @@ describe('NwsIngestionService', () => {
       true,
       expect.any(String),
     );
+  });
+
+  it('returns the oldest forecast issuance across all requested zones', async () => {
+    jest.spyOn(service, 'refreshConditions')
+      .mockResolvedValueOnce('2026-11-05T10:00:00Z')
+      .mockResolvedValueOnce('2026-11-04T08:00:00-04:00');
+    jest.spyOn(service, 'refreshAlerts').mockResolvedValue(undefined);
+    await expect(service.refreshZones(['PRZ001', 'PRZ002'])).resolves.toEqual({
+      attempted: 4, failed: 0, publishedAt: '2026-11-04T12:00:00.000Z',
+    });
+  });
+
+  it.each([null, 'invalid'])('does not claim publication freshness with missing/invalid issuance %s', async (issuance) => {
+    jest.spyOn(service, 'refreshConditions').mockResolvedValueOnce(issuance);
+    jest.spyOn(service, 'refreshAlerts').mockResolvedValue(undefined);
+    await expect(service.refreshZones(['PRZ001'])).resolves.toEqual({ attempted: 2, failed: 0, publishedAt: null });
+  });
+
+  it('passes persisted condition issuance to the scheduled run', async () => {
+    persistence.saveCondition.mockResolvedValue(undefined);
+    const observedAt = '2026-11-05T09:00:00Z';
+    nws.getConditions.mockResolvedValue({ source: { observedAt } });
+    await expect(service.refreshConditions('PRZ001')).resolves.toBe(observedAt);
   });
 });
