@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request = require('supertest');
 import { DATABASE } from '../database/database.module';
 import { HealthController } from './health.controller';
+import { SourceHealthService } from '../source-health/source-health.service';
 
 describe('Health endpoints', () => {
   let app: INestApplication;
@@ -12,7 +13,10 @@ describe('Health endpoints', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [{ provide: DATABASE, useValue: { raw } }],
+      providers: [
+        { provide: DATABASE, useValue: { raw } },
+        { provide: SourceHealthService, useValue: { getStatus: jest.fn() } },
+      ],
     }).compile();
     app = module.createNestApplication();
     await app.init();

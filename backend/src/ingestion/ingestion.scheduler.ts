@@ -4,8 +4,8 @@ import { DATABASE } from '../database/database.module';
 import { NwsIngestionService } from './nws-ingestion.service';
 import { IngestionService } from './ingestion.service';
 
-export const NWS_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
-export const DRNA_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+import { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from './refresh-intervals';
+export { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from './refresh-intervals';
 
 @Injectable()
 export class IngestionScheduler implements OnModuleDestroy {
@@ -38,13 +38,21 @@ export class IngestionScheduler implements OnModuleDestroy {
       this.logger.warn('Skipping overlapping DRNA refresh');
       return;
     }
+
     this.drnaRunning = true;
+    const startedAt = new Date().toISOString();
+    let succeeded = false;
+
     try {
       await this.drna.refresh();
+      succeeded = true;
       this.logger.log('DRNA refresh complete');
     } catch {
-      this.logger.error('DRNA refresh failed; retrying on the next scheduled tick');
+      this.logger.error(
+        'DRNA refresh failed; retrying on the next scheduled tick',
+      );
     } finally {
+      await this.recordScheduledRun('drna', startedAt, succeeded);
       this.drnaRunning = false;
     }
   }
@@ -54,15 +62,38 @@ export class IngestionScheduler implements OnModuleDestroy {
       this.logger.warn('Skipping overlapping NWS refresh');
       return;
     }
+
     this.running = true;
+    const startedAt = new Date().toISOString();
+    let succeeded = false;
+    let publishedAt: string | null = null;
+
     try {
-      const zones = await this.db('beaches').distinct('nws_forecast_zone').whereNotNull('nws_forecast_zone');
-      const result = await this.nws.refreshZones(zones.map(row => row.nws_forecast_zone));
-      this.logger.log(`NWS refresh: ${result.attempted - result.failed}/${result.attempted} requests saved`);
-      if (result.failed) this.logger.warn(`${result.failed} NWS refresh requests failed`);
+      const zones = await this.db('beaches')
+        .distinct('nws_forecast_zone')
+        .whereNotNull('nws_forecast_zone');
+
+      const result = await this.nws.refreshZones(
+        zones.map((row) => row.nws_forecast_zone),
+      );
+
+      succeeded = result.attempted > 0 && result.failed === 0;
+      publishedAt = succeeded ? result.publishedAt ?? null : null;
+      if (result.attempted === 0) this.logger.warn('NWS refresh skipped: no mapped zones');
+
+      this.logger.log(
+        `NWS refresh: ${result.attempted - result.failed}/${result.attempted} requests saved`,
+      );
+
+      if (result.failed) {
+        this.logger.warn(`${result.failed} NWS refresh requests failed`);
+      }
     } catch {
-      this.logger.error('NWS refresh failed; retrying on the next scheduled tick');
+      this.logger.error(
+        'NWS refresh failed; retrying on the next scheduled tick',
+      );
     } finally {
+      await this.recordScheduledRun('nws', startedAt, succeeded, publishedAt);
       this.running = false;
     }
   }
@@ -72,5 +103,32 @@ export class IngestionScheduler implements OnModuleDestroy {
     this.timer = undefined;
     if (this.drnaTimer) clearInterval(this.drnaTimer);
     this.drnaTimer = undefined;
+  }
+
+  private async recordScheduledRun(
+    source: 'nws' | 'drna',
+    startedAt: string,
+    succeeded: boolean,
+    publishedAt: string | null = null,
+  ): Promise<void> {
+    const finishedAt = new Date();
+
+    try {
+      await this.db('source_refresh_history').insert({
+        source,
+        source_key: 'scheduled-run',
+        zone_id: null,
+        started_at: startedAt,
+        finished_at: finishedAt.toISOString(),
+        succeeded,
+        duration_ms: Math.max(
+          0,
+          finishedAt.getTime() - new Date(startedAt).getTime(),
+        ),
+        published_at: publishedAt,
+      });
+    } catch {
+      this.logger.error(`Unable to persist ${source} refresh history`);
+    }
   }
 }
