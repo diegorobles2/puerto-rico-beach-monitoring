@@ -24,7 +24,7 @@ export class IngestionService implements OnModuleDestroy {
       const observations = catalog.observations.flatMap((observation) => {
         const beachId = observation.stationId ? beachIds.get(observation.stationId) : null;
         if (!beachId || !observation.source.observedAt || !observation.source.sourceUrl) return [];
-        return [{ beach_id: beachId, sampled_at: toIsoDate(observation.source.observedAt),
+        return [{ beach_id: beachId, sampled_at: formatDrnaSampleDate(observation.source.observedAt),
           enterococcus_value: observation.enterococcus.value, enterococcus_qualifier: observation.enterococcus.qualifier,
           status: observation.status, sampling_type: observation.sampleType, temperature_celsius: observation.temperatureCelsius,
           ph: observation.ph, observations: observation.notes ?? null, source_url: observation.source.sourceUrl,
@@ -45,7 +45,7 @@ export class IngestionService implements OnModuleDestroy {
   async onModuleDestroy(): Promise<void> { await this.db.destroy(); }
 }
 
-function toIsoDate(value: string): string {
+export function formatDrnaSampleDate(value: string): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const match = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(value);
   const month = match ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(match[2]) : -1;

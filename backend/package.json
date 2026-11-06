@@ -10,6 +10,7 @@
     "ingest": "ts-node src/ingestion/run-ingestion.ts",
     "ingest:nws": "ts-node src/ingestion/run-nws-ingestion.ts",
     "map:nws": "ts-node src/ingestion/run-nws-mapping.ts",
+    "verify:fidelity": "ts-node src/verification/verify-source-api-fidelity.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "test": "jest"

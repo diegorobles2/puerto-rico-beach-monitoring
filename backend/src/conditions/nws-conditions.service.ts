@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { DATABASE } from '../database/database.module';
 import type { AlertsResponseDto, BeachAlertDto } from './dto/alerts-response.dto';
@@ -9,6 +9,7 @@ import type {
 } from './dto/ocean-risk-response.dto';
 
 const HOUR_MS = 60 * 60 * 1000;
+export const NWS_CONDITIONS_CLOCK = Symbol('NWS_CONDITIONS_CLOCK');
 
 // NWS data is planned to refresh every 30 minutes. Allow missed refreshes
 // before the stored data stops counting as current.
@@ -20,7 +21,10 @@ export const ALERTS_STALE_AFTER_MS = HOUR_MS;
 
 @Injectable()
 export class NwsConditionsService {
-  constructor(@Inject(DATABASE) private readonly db: Knex) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Knex,
+    @Optional() @Inject(NWS_CONDITIONS_CLOCK) private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async getOceanRisk(beachId: number): Promise<OceanRiskResponseDto> {
     const zoneId = await this.findForecastZone(beachId);
@@ -67,10 +71,11 @@ export class NwsConditionsService {
       return { ...unavailable('risk-not-published'), ...provenance };
     }
 
+    const now = this.now();
     const stale =
       await this.latestAttemptFailed('conditions', zoneId, retrievedAt) ||
-      isOlderThan(retrievedAt, OCEAN_RISK_RETRIEVAL_STALE_AFTER_MS) ||
-      isOlderThan(observedAt, OCEAN_RISK_ISSUANCE_STALE_AFTER_MS);
+      isOlderThan(retrievedAt, OCEAN_RISK_RETRIEVAL_STALE_AFTER_MS, now) ||
+      isOlderThan(observedAt, OCEAN_RISK_ISSUANCE_STALE_AFTER_MS, now);
 
     if (stale) {
       return {
@@ -124,11 +129,12 @@ export class NwsConditionsService {
 
     if (!snapshot) return unavailable('no-data');
 
+    const now = this.now();
     const rows = await this.db('nws_alerts as a')
       .join('nws_alert_zones as az', 'a.id', 'az.alert_id')
       .where('az.zone_id', zoneId)
       .where('az.is_active', true)
-      .where('a.expires_at', '>', new Date().toISOString())
+      .where('a.expires_at', '>', now.toISOString())
       .orderBy('a.expires_at', 'asc')
       .select(
         'a.id',
@@ -148,7 +154,7 @@ export class NwsConditionsService {
     const alerts = rows.map(toAlertDto);
     const retrievedAt = toIsoStringOrNull(snapshot.retrieved_at)!;
     const availability: NwsAvailability = await this.latestAttemptFailed('alerts', zoneId, retrievedAt)
-      || isOlderThan(retrievedAt, ALERTS_STALE_AFTER_MS)
+      || isOlderThan(retrievedAt, ALERTS_STALE_AFTER_MS, now)
       ? 'stale'
       : 'available';
 
@@ -221,7 +227,7 @@ function toIsoStringOrNull(value: unknown): string | null {
 }
 
 // Missing or unparseable times count as old so they can never look current.
-function isOlderThan(isoTime: string | null, maxAgeMs: number): boolean {
+function isOlderThan(isoTime: string | null, maxAgeMs: number, now: Date): boolean {
   if (!isoTime) return true;
-  return Date.now() - new Date(isoTime).getTime() > maxAgeMs;
+  return now.getTime() - new Date(isoTime).getTime() > maxAgeMs;
 }
