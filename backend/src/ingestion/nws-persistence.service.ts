@@ -134,45 +134,63 @@ export class NwsPersistenceService {
     succeeded: boolean,
     attemptedAt: string,
   ): Promise<void> {
-    await this.db('nws_source_health')
-      .insert({
+    const finishedAt = new Date();
+    const durationMs = Math.max(
+      0,
+      finishedAt.getTime() - new Date(attemptedAt).getTime(),
+    );
+
+    await this.db.transaction(async (trx) => {
+      await trx('nws_source_health')
+        .insert({
+          source_key: sourceKey,
+          zone_id: zoneId,
+          last_attempt_at: attemptedAt,
+          last_success_at: succeeded ? attemptedAt : null,
+          last_attempt_succeeded: succeeded,
+        })
+        .onConflict(['source_key', 'zone_id'])
+        .merge({
+          last_attempt_at: trx.raw(`
+            greatest(
+              coalesce(nws_source_health.last_attempt_at, excluded.last_attempt_at),
+              excluded.last_attempt_at
+            )
+          `),
+          last_attempt_succeeded: trx.raw(`
+            case
+              when nws_source_health.last_attempt_at is null
+                or excluded.last_attempt_at >= nws_source_health.last_attempt_at
+              then excluded.last_attempt_succeeded
+              else nws_source_health.last_attempt_succeeded
+            end
+          `),
+          last_success_at: trx.raw(`
+            case
+              when excluded.last_attempt_succeeded = true
+              then greatest(
+                nws_source_health.last_success_at,
+                excluded.last_success_at
+              )
+              else nws_source_health.last_success_at
+            end
+          `),
+          updated_at: trx.fn.now(),
+        });
+
+      await trx('source_refresh_history').insert({
+        source: 'nws',
         source_key: sourceKey,
         zone_id: zoneId,
-        last_attempt_at: attemptedAt,
-        last_success_at: succeeded ? attemptedAt : null,
-        last_attempt_succeeded: succeeded,
-      })
-
-      .onConflict(['source_key', 'zone_id'])
-      .merge({
-        last_attempt_at: this.db.raw(`
-          greatest(
-            coalesce(nws_source_health.last_attempt_at, excluded.last_attempt_at),
-            excluded.last_attempt_at
-          )
-        `),
-        last_attempt_succeeded: this.db.raw(`
-          case
-            when nws_source_health.last_attempt_at is null
-              or excluded.last_attempt_at >= nws_source_health.last_attempt_at
-            then excluded.last_attempt_succeeded
-            else nws_source_health.last_attempt_succeeded
-          end
-        `),
-        last_success_at: this.db.raw(`
-          case
-            when excluded.last_attempt_succeeded = true
-            then greatest(
-              nws_source_health.last_success_at,
-              excluded.last_success_at
-            )
-            else nws_source_health.last_success_at
-          end
-        `),
-        updated_at: this.db.fn.now(),
+        started_at: attemptedAt,
+        finished_at: finishedAt.toISOString(),
+        succeeded,
+        duration_ms: durationMs,
+        published_at: null,
       });
-
+    });
   }
+
 
   async getStoredConditionsByBeach(beachId: string) {
     const beach = await this.db('beaches')
