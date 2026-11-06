@@ -2,6 +2,8 @@ import { NotFoundException } from '@nestjs/common';
 import { ConditionsService } from './conditions.service';
 
 describe('ConditionsService', () => {
+  beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-04T12:00:00Z')));
+  afterEach(() => jest.restoreAllMocks());
   it('returns normalized water-quality data when an observation exists', async () => {
     const db = createDbMock(
       { id: 1 },
@@ -60,6 +62,28 @@ describe('ConditionsService', () => {
       NotFoundException,
     );
   });
+
+  it.each([
+    ['2026-10-02', '2026-10-04T00:00:00Z', 'available'],
+    ['2026-10-02', '2026-10-04T00:00:00.001Z', 'stale'],
+    ['2000-01-01', '2026-10-04T12:00:00Z', 'stale'],
+    ['2026-10-05', '2026-10-04T12:00:00Z', 'stale'],
+    [null, '2026-10-04T12:00:00Z', 'stale'],
+    ['invalid', '2026-10-04T12:00:00Z', 'stale'],
+    ['2026-02-30', '2026-10-04T12:00:00Z', 'stale'],
+  ])('classifies sample %s at %s as %s independently of fresh retrieval', async (sampled_at, now, availability) => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse(now));
+    const service = new ConditionsService(createDbMock({ id: 1 }, {
+      status: 'suitable', sampled_at, retrieved_at: now, source_url: 'https://www.drna.pr.gov/',
+      enterococcus_value: 20, enterococcus_qualifier: null, sampling_type: 'routine',
+      temperature_celsius: null, ph: null,
+    }) as never);
+    const result = await service.getWaterQuality(1);
+    expect(result.availability).toBe(availability);
+    expect(result.status).toBe(availability === 'stale' ? 'unknown' : 'suitable');
+    expect(result.lastKnownStatus).toBe(availability === 'stale' ? 'suitable' : undefined);
+    expect(result.enterococcusValue).toBe(20);
+  });
 });
 
 function createDbMock(
@@ -67,7 +91,7 @@ function createDbMock(
   observation:
     | {
         status: string;
-        sampled_at: Date | string;
+        sampled_at: Date | string | null;
         retrieved_at: Date | string;
         source_url: string;
         enterococcus_value: number | null;

@@ -15,12 +15,13 @@ const SOURCE_URL = 'https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria
 
 // Response body from GET /conditions/7/water-quality for the RW-22 fixture record.
 const ADVISORY: WaterQualityCondition = {
-  status: 'advisory',
+  status: 'unknown',
+  lastKnownStatus: 'advisory',
   source: 'DRNA',
   sourceUrl: SOURCE_URL,
   observedAt: '2026-09-21',
   retrievedAt: '2026-10-07T12:00:00.000Z',
-  availability: 'available',
+  availability: 'stale',
   enterococcusValue: 231,
   enterococcusQualifier: null,
   samplingType: 'routine',
@@ -63,18 +64,18 @@ describe('BeachPage water quality', () => {
     render(<BeachPage />);
 
     expect(within(await waterQualityCard()).getByText(/Loading water-quality status/i)).toBeInTheDocument();
-    await screen.findByText('Advisory');
+    await screen.findByText(/Last-known sample status: Advisory/);
   });
 
   it('renders status, source, and timestamps from the backend response', async () => {
     const fetchMock = mockApi({ status: 200, body: ADVISORY });
     render(<BeachPage />);
 
-    await screen.findByText('Advisory');
+    await screen.findByText(/Last-known sample status: Advisory/);
     const card = await waterQualityCard();
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/conditions\/7\/water-quality$/), expect.anything());
-    expect(within(card).getByText(/under advisory conditions/i)).toBeInTheDocument();
+    expect(within(card).getByText(/Current water quality is unknown/i)).toBeInTheDocument();
     expect(within(card).getByText('DRNA')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: /read report/i })).toHaveAttribute('href', SOURCE_URL);
     expect(within(card).getByText('Observed').nextElementSibling).toHaveTextContent('2026-09-21');
@@ -86,7 +87,7 @@ describe('BeachPage water quality', () => {
     mockApi({ status: 200, body: ADVISORY });
     render(<BeachPage />);
 
-    await screen.findByText('Advisory');
+    await screen.findByText(/Last-known sample status: Advisory/);
     const card = await waterQualityCard();
 
     expect(card).not.toHaveTextContent(/risk|rip current|surf/i);

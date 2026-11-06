@@ -32,7 +32,7 @@ export class ConditionsController {
   })
   @ApiOkResponse({
     description:
-      'Returns normalized water-quality information. If source data is unavailable, availability is "unavailable" and status is "unknown".',
+      'Returns normalized water-quality information. Old or unusably dated samples return availability "stale", status "unknown", and historical lastKnownStatus. Missing observations return availability "unavailable" and status "unknown".',
     type: WaterQualityResponseDto,
   })
   getWaterQuality(

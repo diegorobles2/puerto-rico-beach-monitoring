@@ -78,6 +78,6 @@ describe('Source failures through ingestion and public reads', () => {
     const alerts = await request(app.getHttpServer()).get('/conditions/7/alerts').expect(200);
     expect(alerts.body).toMatchObject({ status: 'unknown', availability: 'stale', alerts: [], retrievedAt });
     const water = await request(app.getHttpServer()).get('/conditions/7/water-quality').expect(200);
-    expect(water.body).toMatchObject({ status: 'advisory', observedAt, retrievedAt });
+    expect(water.body).toMatchObject({ status: 'unknown', lastKnownStatus: 'advisory', availability: 'stale', observedAt, retrievedAt });
   });
 });

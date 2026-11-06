@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WaterQualityCard } from './WaterQualityCard';
 
 describe('WaterQualityCard', () => {
+  beforeEach(() => vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-04T12:00:00Z')));
+  afterEach(() => vi.restoreAllMocks());
   it('warns about an old retained sample even when it was recently retrieved', () => {
     render(<WaterQualityCard condition={{
       status: 'advisory', source: 'DRNA', observedAt: '2000-01-01',
@@ -66,5 +68,26 @@ describe('WaterQualityCard', () => {
       availability: 'available', enterococcusValue: 24196, enterococcusQualifier: 'greater-than',
     }} />);
     expect(screen.getByText('>24,196 colonies/100 mL')).toBeInTheDocument();
+  });
+
+  it.each(['suitable', 'advisory'] as const)('labels retained %s measurements as historical', (lastKnownStatus) => {
+    render(<WaterQualityCard condition={{
+      status: 'unknown', lastKnownStatus, source: 'DRNA', observedAt: '2000-01-01',
+      retrievedAt: '2026-10-04T12:00:00Z', availability: 'stale', enterococcusValue: 20,
+    }} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText(/Current water quality is unknown/)).toBeInTheDocument();
+    expect(screen.getByText(/Last-known sample status:.*\(historical\)/)).toBeInTheDocument();
+    expect(screen.getByText('20 colonies/100 mL')).toBeInTheDocument();
+    expect(screen.queryByText(/currently suitable|under advisory conditions/i)).not.toBeInTheDocument();
+  });
+
+  it.each([null, 'invalid', '2026-02-30', '2026-10-05', '2000-01-01'])('defends against an old API claiming a suitable sample dated %s is available', (observedAt) => {
+    render(<WaterQualityCard condition={{
+      status: 'suitable', source: 'DRNA', observedAt, retrievedAt: '2026-10-04T12:00:00Z', availability: 'available',
+    }} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText(/Current water quality is unknown/)).toBeInTheDocument();
+    expect(screen.queryByText(/latest sample indicates suitable|currently suitable/i)).not.toBeInTheDocument();
   });
 });

@@ -14,10 +14,11 @@ export interface Beach {
 }
 
 export type WaterQualityStatus = 'suitable' | 'advisory' | 'unknown';
-export type WaterQualityAvailability = 'available' | 'unavailable';
+export type WaterQualityAvailability = 'available' | 'stale' | 'unavailable';
 
 export interface WaterQualityCondition {
   status: WaterQualityStatus;
+  lastKnownStatus?: WaterQualityStatus;
   source: string;
   sourceUrl?: string | null;
   observedAt: string | null;

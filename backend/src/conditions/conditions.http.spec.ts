@@ -31,6 +31,7 @@ function createDb(beach: { id: number } | undefined, observation: typeof RW22_OB
 
 describe('GET /conditions/:beachId/water-quality', () => {
   let app: INestApplication;
+  beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-07T12:00:00Z')));
 
   async function start(db: ReturnType<typeof createDb>) {
     const module = await Test.createTestingModule({
@@ -42,6 +43,7 @@ describe('GET /conditions/:beachId/water-quality', () => {
   }
 
   afterEach(async () => app?.close());
+  afterEach(() => jest.restoreAllMocks());
 
   it('returns the normalized status and provenance of the latest observation', async () => {
     await start(createDb({ id: 7 }, RW22_OBSERVATION));
@@ -49,18 +51,26 @@ describe('GET /conditions/:beachId/water-quality', () => {
     const response = await request(app.getHttpServer()).get('/conditions/7/water-quality').expect(200);
 
     expect(response.body).toEqual({
-      status: 'advisory',
+      status: 'unknown',
+      lastKnownStatus: 'advisory',
       source: 'DRNA',
       sourceUrl: RW22_OBSERVATION.source_url,
       observedAt: '2026-09-21',
       retrievedAt: '2026-10-07T12:00:00.000Z',
-      availability: 'available',
+      availability: 'stale',
       enterococcusValue: 231,
       enterococcusQualifier: null,
       samplingType: 'routine',
       temperatureCelsius: 29,
       ph: 8.19,
     });
+  });
+
+  it('returns a recent sample as available without inventing a historical status', async () => {
+    await start(createDb({ id: 7 }, { ...RW22_OBSERVATION, sampled_at: new Date(2026, 9, 7) }));
+    const response = await request(app.getHttpServer()).get('/conditions/7/water-quality').expect(200);
+    expect(response.body).toMatchObject({ status: 'advisory', observedAt: '2026-10-07', availability: 'available' });
+    expect(response.body).not.toHaveProperty('lastKnownStatus');
   });
 
   it('reports unavailable data as unknown rather than suitable', async () => {
