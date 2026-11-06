@@ -17,7 +17,7 @@ const BEACHES: Beach[] = [
 ];
 
 function waterQuality(status: WaterQualityCondition['status']): WaterQualityCondition {
-  return { status, source: 'DRNA', observedAt: '2026-10-20', retrievedAt: '2026-10-21T12:00:00.000Z', availability: 'available' };
+  return { status, source: 'DRNA', observedAt: new Date().toISOString().slice(0, 10), retrievedAt: new Date().toISOString(), availability: 'available' };
 }
 
 function mockApi() {

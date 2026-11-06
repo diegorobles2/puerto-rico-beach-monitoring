@@ -2,6 +2,10 @@
 
 This document records how the Sprint 2 DRNA water-quality slice is verified, from the published DRNA PDF through the beach page.
 
+The parser evidence below is historical. The current API/card contract additionally
+applies [sample freshness](drna-freshness.md): samples over 48 hours old have unknown
+current status and a separate historical `lastKnownStatus`; retrieval does not reset age.
+
 DRNA PDF ─▶ parseMonitoringRecords ─▶ mapDrnaWaterQuality ─▶ IngestionService ─▶ Supabase
        WaterQualityCard ◀─ BeachPage ◀─ GET /conditions/:beachId/water-quality ◀────┘
 
@@ -82,12 +86,16 @@ Prerequisites: `DATABASE_URL` in `backend/.env`.
    curl http://localhost:3000/conditions/<id>/water-quality
    ```
 
-   Expected, if the 25 September 2026 publication is still the newest: `"status": "advisory"`, `"enterococcusValue": 231`, `"observedAt": "2026-09-21"`, `"source": "DRNA"`, and `sourceUrl` pointing at the PDF. If DRNA has published newer results, compare the response with the last RW-22 row of that PDF instead.
+   For the September 21 sample after the 48-hour cutoff, expect `"status": "unknown"`,
+   `"lastKnownStatus": "advisory"`, `"availability": "stale"`, `"enterococcusValue": 231`,
+   `"observedAt": "2026-09-21"`, `"source": "DRNA"`, and the PDF source URL. If DRNA
+   has published newer results, compare the retained measurement with that source and
+   evaluate freshness using its sample date instead.
 
 3. Start the frontend (`cd frontend && npm run dev`), open <http://localhost:5173>, and choose **Pico de Piedra** from the beach list or the map.
 
 4. In the **Water quality** card, confirm that:
-   - the status label reads **Advisory** (as text, not only as color);
+   - an old sample shows **Unknown** current status and explicitly historical **Advisory**;
    - the source reads **DRNA**, and **Read report** opens the DRNA PDF;
    - **Observed** shows the sample date and **Retrieved** shows when ingestion ran;
    - the **Ocean risk** card is separate and makes no water-quality claim.
