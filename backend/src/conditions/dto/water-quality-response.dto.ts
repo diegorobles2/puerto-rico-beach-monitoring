@@ -3,15 +3,19 @@ import type { WaterQualityStatus } from '../../types/domain';
 
 export type WaterQualityAvailability =
   | 'available'
+  | 'stale'
   | 'unavailable';
 
 export class WaterQualityResponseDto {
   @ApiProperty({
     example: 'suitable',
     enum: ['suitable', 'advisory', 'unknown'],
-    description: 'Normalized water-quality status.',
+    description: 'Current normalized status. Always unknown for stale or unavailable observations.',
   })
   status!: WaterQualityStatus;
+
+  @ApiPropertyOptional({ enum: ['suitable', 'advisory', 'unknown'], description: 'Retained sample status, historical only. Present when availability is stale.' })
+  lastKnownStatus?: WaterQualityStatus;
 
   @ApiProperty({
     example: 'DRNA',
@@ -41,9 +45,9 @@ export class WaterQualityResponseDto {
 
   @ApiProperty({
     example: 'available',
-    enum: ['available', 'unavailable'],
+    enum: ['available', 'stale', 'unavailable'],
     description:
-      'Whether normalized water-quality information is currently available.',
+      'Stale if the sample is older than 48 hours or its date is missing, invalid, or future. Retrieval does not reset sample age.',
   })
   availability!: WaterQualityAvailability;
 

@@ -63,12 +63,17 @@ export function WaterQualityCard({
     );
   }
 
-  const status = condition.status ?? 'unknown';
+  const sampleTime = condition.observedAt ? Date.parse(condition.observedAt) : NaN;
+  const now = Date.now();
+  const validSampleDate = !!condition.observedAt && /^\d{4}-\d{2}-\d{2}$/.test(condition.observedAt)
+    && Number.isFinite(sampleTime) && new Date(sampleTime).toISOString().slice(0, 10) === condition.observedAt;
+  // Also protect clients receiving an older API response or data that ages while displayed.
+  const isStale = condition.availability === 'stale' || !validSampleDate || sampleTime > now
+    || now - sampleTime > 48 * 60 * 60 * 1000;
+  const status = isStale ? 'unknown' : condition.status ?? 'unknown';
+  const historicalStatus = condition.lastKnownStatus ?? condition.status ?? 'unknown';
   const sourceName = condition.source || 'Unknown source';
   const provenanceDate = formatIsoDate(condition.retrievedAt) ?? formatIsoDate(condition.observedAt);
-  const isStale =
-    !!condition.observedAt &&
-    Date.now() - new Date(condition.observedAt).getTime() > 1000 * 60 * 60 * 24 * 2;
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -89,12 +94,20 @@ export function WaterQualityCard({
       </div>
 
       <p className="mt-3 text-sm font-medium text-slate-700">
-        {status === 'suitable'
-          ? 'Water quality is currently suitable.'
+        {isStale ? 'Current water quality is unknown. Retained measurements are historical.'
+          : status === 'suitable'
+          ? 'The latest sample indicates suitable water quality; this is not a safety guarantee.'
           : status === 'advisory'
             ? 'Water quality is under advisory conditions.'
             : 'No current water-quality reading is available.'}
       </p>
+
+      {isStale ? (
+        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+          Stale data: this reading is older than 48 hours or its date cannot establish freshness.
+          {' '}Last-known sample status: {statusLabels[historicalStatus]} (historical).
+        </p>
+      ) : null}
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-lg bg-sky-50 p-3">
@@ -143,11 +156,6 @@ export function WaterQualityCard({
         </div>
       </dl>
 
-      {isStale ? (
-        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-          Stale data: this reading is more than 48 hours old.
-        </p>
-      ) : null}
     </article>
   );
 }

@@ -114,12 +114,13 @@ Replace `<beachId>` with an ID returned by `GET /beaches`. Responses below are r
 
 ```json
 {
-  "status": "advisory",
+  "status": "unknown",
+  "lastKnownStatus": "advisory",
   "source": "DRNA",
   "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
   "observedAt": "2026-09-21",
   "retrievedAt": "2026-10-03T20:44:00.000Z",
-  "availability": "available",
+  "availability": "stale",
   "enterococcusValue": 231,
   "enterococcusQualifier": null,
   "samplingType": "routine",
@@ -129,6 +130,12 @@ Replace `<beachId>` with an ID returned by `GET /beaches`. Responses below are r
 ```
 
 When no observation is available, the API returns `status: "unknown"`, `availability: "unavailable"`, and null timestamps. The normalized response may include Enterococcus, sampling type, temperature, and pH when the source provides them.
+
+Samples older than 48 hours (or with missing, invalid, or future sample dates) return
+`availability: "stale"`, `status: "unknown"`, and the retained `lastKnownStatus`.
+Measurements remain historical; a fresh retrieval does not reset the sample age.
+This is a conservative application policy, not a DRNA publication schedule or safety
+guarantee. See [DRNA sample freshness](docs/testing/drna-freshness.md).
 
 ### Ocean risk
 
