@@ -1,0 +1,340 @@
+{
+  "version": 1,
+  "minimumAgreementPercent": 98,
+  "drnaReplayRetrievedAt": "2026-10-07T12:00:00.000Z",
+  "nwsReplayAsOf": "2026-10-14T21:30:00.000Z",
+  "nwsReplayRetrievedAt": "2026-10-14T21:25:00.000Z",
+  "fieldMappings": {
+    "DRNA": [
+      { "apiField": "status", "normalizedField": "status" },
+      { "apiField": "source", "normalizedField": "source.sourceName" },
+      { "apiField": "sourceUrl", "normalizedField": "source.sourceUrl" },
+      { "apiField": "observedAt", "normalizedField": "source.observedAt", "transform": "drna-sample-date" },
+      { "apiField": "retrievedAt", "normalizedField": "source.retrievedAt" },
+      { "apiField": "availability", "literal": "available" },
+      { "apiField": "enterococcusValue", "normalizedField": "enterococcus.value" },
+      { "apiField": "enterococcusQualifier", "normalizedField": "enterococcus.qualifier" },
+      { "apiField": "samplingType", "normalizedField": "sampleType" },
+      { "apiField": "temperatureCelsius", "normalizedField": "temperatureCelsius" },
+      { "apiField": "ph", "normalizedField": "ph" }
+    ],
+    "NWS_RISK": [
+      { "apiField": "beachId", "literal": 901 },
+      { "apiField": "zoneId", "normalizedField": "zoneId" },
+      { "apiField": "status", "normalizedField": "risk" },
+      { "apiField": "summary", "normalizedField": "summary" },
+      { "apiField": "forecastPeriod", "normalizedField": "forecastPeriod" },
+      { "apiField": "source", "normalizedField": "source.sourceName" },
+      { "apiField": "sourceUrl", "normalizedField": "source.sourceUrl" },
+      { "apiField": "observedAt", "normalizedField": "source.observedAt" },
+      { "apiField": "retrievedAt", "normalizedField": "source.retrievedAt" },
+      { "apiField": "availability", "literal": "available" }
+    ],
+    "NWS_ALERTS": [
+      { "apiField": "beachId", "literal": 902 },
+      { "apiField": "zoneId", "literal": "PRZ007" },
+      { "apiField": "status", "literal": "active-alerts" },
+      { "apiField": "source", "literal": "NWS" },
+      { "apiField": "retrievedAt", "normalizedField": "source.retrievedAt" },
+      { "apiField": "availability", "literal": "available" },
+      { "apiField": "alerts.0.id", "normalizedField": "id" },
+      { "apiField": "alerts.0.title", "normalizedField": "title" },
+      { "apiField": "alerts.0.description", "normalizedField": "description" },
+      { "apiField": "alerts.0.instruction", "normalizedField": "instruction" },
+      { "apiField": "alerts.0.severity", "normalizedField": "severity" },
+      { "apiField": "alerts.0.certainty", "normalizedField": "certainty" },
+      { "apiField": "alerts.0.urgency", "normalizedField": "urgency" },
+      { "apiField": "alerts.0.effectiveAt", "normalizedField": "effectiveAt" },
+      { "apiField": "alerts.0.expiresAt", "normalizedField": "expiresAt" },
+      { "apiField": "alerts.0.observedAt", "normalizedField": "source.observedAt" },
+      { "apiField": "alerts.0.retrievedAt", "normalizedField": "source.retrievedAt" },
+      { "apiField": "alerts.0.sourceUrl", "normalizedField": "source.sourceUrl" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "drna-rw34-2023-01-09",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-34",
+        "sampleDate": "9-Jan-2023"
+      },
+      "api": { "beachId": 101, "path": "/conditions/101/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-34",
+        "beachName": "Playa Cabullón",
+        "status": "suitable",
+        "sampleType": "routine",
+        "enterococcus": { "value": 10, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": 27.5,
+        "ph": 8.19,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "9-Jan-2023", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw18-2026-09-14",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-18",
+        "sampleDate": "14-Sep-2026"
+      },
+      "api": { "beachId": 102, "path": "/conditions/102/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-18",
+        "beachName": "Balneario Manuel “Nolo” Morales or Sardinera",
+        "status": "suitable",
+        "sampleType": "resampling",
+        "enterococcus": { "value": 30, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": 28.7,
+        "ph": null,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "14-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw25a-2026-09-14",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-25A",
+        "sampleDate": "14-Sep-2026"
+      },
+      "api": { "beachId": 103, "path": "/conditions/103/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-25A",
+        "beachName": "Playa Sixto Escobar",
+        "status": "suitable",
+        "sampleType": "resampling",
+        "enterococcus": { "value": 10, "qualifier": "less-than", "unit": "colonies/100 mL" },
+        "temperatureCelsius": 29.3,
+        "ph": null,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "14-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw18-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-18",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 104, "path": "/conditions/104/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-18",
+        "beachName": "Balneario Manuel “Nolo” Morales or Sardinera",
+        "status": "unknown",
+        "sampleType": "routine",
+        "enterococcus": { "value": null, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": null,
+        "ph": null,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw25a-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-25A",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 105, "path": "/conditions/105/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-25A",
+        "beachName": "Playa Sixto Escobar",
+        "status": "unknown",
+        "sampleType": "routine",
+        "enterococcus": { "value": null, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": null,
+        "ph": null,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw12b-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-12B",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 106, "path": "/conditions/106/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-12B",
+        "beachName": "Playa el Combate",
+        "status": "unknown",
+        "sampleType": "routine",
+        "enterococcus": { "value": null, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": 30.9,
+        "ph": 8.17,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw15-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-15",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 107, "path": "/conditions/107/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-15",
+        "beachName": "Balneario de Añasco or Balneario Tres Hermanos",
+        "status": "suitable",
+        "sampleType": "routine",
+        "enterococcus": { "value": 10, "qualifier": "less-than", "unit": "colonies/100 mL" },
+        "temperatureCelsius": 29.2,
+        "ph": 8.04,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw22-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-22",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 108, "path": "/conditions/108/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-22",
+        "beachName": "Pico de Piedra",
+        "status": "advisory",
+        "sampleType": "routine",
+        "enterococcus": { "value": 231, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": 29,
+        "ph": 8.19,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw16-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-16",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 109, "path": "/conditions/109/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-16",
+        "beachName": "Balneario Crash Boat",
+        "status": "suitable",
+        "sampleType": "routine",
+        "enterococcus": { "value": 10, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": 29.7,
+        "ph": 8.22,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "drna-rw17-2026-09-21",
+      "provider": "DRNA",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/drna/fixtures/monitoring-results-pdf-text.txt",
+        "publicationDate": "2026-09-25",
+        "fixtureRetrievedDate": "2026-10-07",
+        "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf",
+        "stationId": "RW-17",
+        "sampleDate": "21-Sep-2026"
+      },
+      "api": { "beachId": 110, "path": "/conditions/110/water-quality" },
+      "expectedNormalized": {
+        "stationId": "RW-17",
+        "beachName": "Balneario Cerro Gordo or Javier Calderón Nieves",
+        "status": "unknown",
+        "sampleType": "routine",
+        "enterococcus": { "value": null, "qualifier": null, "unit": "colonies/100 mL" },
+        "temperatureCelsius": null,
+        "ph": null,
+        "source": { "sourceName": "DRNA", "sourceUrl": "https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf", "observedAt": "21-Sep-2026", "retrievedAt": "2026-10-07T12:00:00.000Z" }
+      }
+    },
+    {
+      "id": "nws-risk-prz001",
+      "provider": "NWS_RISK",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/nws/fixtures/surf-forecast-success.json",
+        "capturedAt": "2026-10-14",
+        "sourceUrl": "https://api.weather.gov/products/02f99345-ccbf-4d88-94da-7e6aee5521da",
+        "stationId": null,
+        "forecastZone": "PRZ001"
+      },
+      "api": { "beachId": 901, "path": "/conditions/901/ocean-risk" },
+      "expectedNormalized": {
+        "zoneId": "PRZ001",
+        "forecastPeriod": "THURSDAY",
+        "risk": "moderate",
+        "summary": "Moderate rip-current risk.",
+        "source": {
+          "sourceName": "NWS",
+          "sourceUrl": "https://api.weather.gov/products/02f99345-ccbf-4d88-94da-7e6aee5521da",
+          "observedAt": "2026-10-14T20:08:00.000Z",
+          "retrievedAt": "2026-10-14T21:25:00.000Z"
+        }
+      }
+    },
+    {
+      "id": "nws-alert-prz007",
+      "provider": "NWS_ALERTS",
+      "sourceEvidence": {
+        "fixture": "src/data-sources/nws/fixtures/alerts-active-success.json",
+        "capturedAt": "2026-10-14",
+        "sourceUrl": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5871c4af87d6de97a9c582222d65cf75b9c5c349.001.1",
+        "stationId": null,
+        "forecastZone": "PRZ007"
+      },
+      "api": { "beachId": 902, "path": "/conditions/902/alerts" },
+      "expectedNormalized": {
+        "id": "urn:oid:2.49.0.1.840.0.5871c4af87d6de97a9c582222d65cf75b9c5c349.001.1",
+        "title": "Special Weather Statement issued October 14 at 5:20PM AST by NWS San Juan PR",
+        "description": "An area of strong thunderstorms was observed over south central Puerto Rico.",
+        "instruction": "Monitor conditions and seek shelter if threatening weather approaches.",
+        "severity": "Moderate",
+        "certainty": "Observed",
+        "urgency": "Expected",
+        "effectiveAt": "2026-10-14T21:20:00.000Z",
+        "expiresAt": "2026-10-14T22:00:00.000Z",
+        "zones": ["PRZ006", "PRZ007"],
+        "source": {
+          "sourceName": "NWS",
+          "sourceUrl": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5871c4af87d6de97a9c582222d65cf75b9c5c349.001.1",
+          "observedAt": "2026-10-14T21:20:00.000Z",
+          "retrievedAt": "2026-10-14T21:25:00.000Z"
+        }
+      }
+    }
+  ]
+}
