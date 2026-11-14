@@ -14,21 +14,42 @@ export const beaches: Beach[] = Array.from({ length: 35 }, (_, index) => ({
 export const waterQuality: WaterQualityCondition = {
   status: 'advisory', source: 'DRNA', availability: 'available',
   observedAt: '2026-11-13', retrievedAt: '2026-11-13T11:00:00Z',
-  sourceUrl: 'https://example.invalid/drna/report.pdf', enterococcusValue: 231,
+  sourceUrl: 'https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf', enterococcusValue: 231,
 };
 export const oceanRisk: OceanRiskResponse = {
   beachId: 1, zoneId: 'PRZ001', status: 'low', availability: 'available',
   summary: 'Fixture low rip-current risk.', forecastPeriod: 'TODAY', source: 'NWS',
   observedAt: '2026-11-13T10:00:00Z', retrievedAt: '2026-11-13T11:00:00Z',
-  sourceUrl: 'https://example.invalid/nws/forecast',
+  sourceUrl: 'https://api.weather.gov/products/02f99345-ccbf-4d88-94da-7e6aee5521da',
 };
 export const alerts: AlertsResponse = {
   beachId: 1, zoneId: 'PRZ001', status: 'no-active-alerts', source: 'NWS',
   retrievedAt: '2026-11-13T11:00:00Z', availability: 'available', alerts: [],
 };
 
-export const test = base.extend({
-  page: async ({ page, context, baseURL }, use) => {
+// Beach 2 deliberately differs from the default so selection tests detect stale cards.
+export const selectedBeach = beaches[1];
+export const selectedWaterQuality: WaterQualityCondition = {
+  ...waterQuality, status: 'suitable', enterococcusValue: 12,
+};
+export const selectedOceanRisk: OceanRiskResponse = {
+  ...oceanRisk, beachId: 2, status: 'high', summary: 'Fixture Beach 02 high rip-current risk.',
+};
+export const selectedAlerts: AlertsResponse = {
+  ...alerts, beachId: 2, status: 'active-alerts', alerts: [{
+    id: 'fixture-beach-02-alert', title: 'Fixture Beach 02 coastal warning',
+    description: 'Synthetic hazardous surf at Fixture Beach 02.', instruction: 'Stay out of the surf.',
+    severity: 'Severe', certainty: 'Likely', urgency: 'Expected',
+    effectiveAt: '2026-11-13T10:00:00Z', expiresAt: '2026-11-14T10:00:00Z',
+    observedAt: '2026-11-13T10:00:00Z', retrievedAt: '2026-11-13T11:00:00Z',
+    sourceUrl: 'https://api.weather.gov/alerts/fixture-beach-02',
+  }],
+};
+
+// Same routing for every test; only this one category can be made unavailable.
+export const test = base.extend<{ unavailableOceanRisk: boolean }>({
+  unavailableOceanRisk: [false, { option: true }],
+  page: async ({ page, context, baseURL, unavailableOceanRisk }, use) => {
     const unexpected: string[] = [];
     await page.clock.setFixedTime(NOW);
     await context.route('**/*', async (route) => {
@@ -44,8 +65,13 @@ export const test = base.extend({
         const match = /^\/api\/conditions\/(\d+)\/(water-quality|ocean-risk|alerts)$/.exec(url.pathname);
         if (match && beaches.some((beach) => beach.id === Number(match[1]))) {
           const beachId = Number(match[1]);
-          const json = match[2] === 'water-quality' ? waterQuality
-            : match[2] === 'ocean-risk' ? { ...oceanRisk, beachId } : { ...alerts, beachId };
+          const risk: OceanRiskResponse = unavailableOceanRisk
+            ? { ...oceanRisk, beachId, status: 'unknown', availability: 'unavailable',
+                summary: 'No published risk for this fixture.', forecastPeriod: null,
+                observedAt: null, sourceUrl: undefined, unavailableReason: 'no-data' }
+            : { ...(beachId === 2 ? selectedOceanRisk : oceanRisk), beachId };
+          const json = match[2] === 'water-quality' ? (beachId === 2 ? selectedWaterQuality : waterQuality)
+            : match[2] === 'ocean-risk' ? risk : { ...(beachId === 2 ? selectedAlerts : alerts), beachId };
           return route.fulfill({ json });
         }
         if (url.pathname === '/' || url.pathname.startsWith('/assets/')) return route.continue();
