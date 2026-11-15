@@ -46,10 +46,38 @@ export const selectedAlerts: AlertsResponse = {
   }],
 };
 
-// Same routing for every test; only this one category can be made unavailable.
-export const test = base.extend<{ unavailableOceanRisk: boolean }>({
+export const staleWaterQuality: WaterQualityCondition = {
+  ...waterQuality, status: 'unknown', lastKnownStatus: 'advisory', availability: 'stale',
+  observedAt: '2026-11-10', retrievedAt: '2026-11-10T11:00:00Z',
+};
+export const staleOceanRisk: OceanRiskResponse = {
+  ...oceanRisk, status: 'unknown', lastKnownStatus: 'low', availability: 'stale',
+  summary: 'Retained fixture low-risk forecast from November 10.',
+  observedAt: '2026-11-10T10:00:00Z', retrievedAt: '2026-11-10T11:00:00Z',
+};
+export const unavailableWaterQuality: WaterQualityCondition = {
+  status: 'unknown', source: 'DRNA', availability: 'unavailable',
+  observedAt: null, retrievedAt: null,
+};
+
+type ConditionCategory = 'water-quality' | 'ocean-risk' | 'alerts';
+type ConditionOverrides = Record<number, Partial<{
+  'water-quality': WaterQualityCondition;
+  'ocean-risk': OceanRiskResponse;
+  alerts: AlertsResponse;
+}>>;
+type ConditionFixtures = {
+  unavailableOceanRisk: boolean;
+  conditionOverrides: ConditionOverrides;
+  failedConditionRequests: Set<`${number}/${ConditionCategory}`>;
+};
+
+// Overrides replace whole typed payloads; failures are enabled explicitly by each test.
+export const test = base.extend<ConditionFixtures>({
   unavailableOceanRisk: [false, { option: true }],
-  page: async ({ page, context, baseURL, unavailableOceanRisk }, use) => {
+  conditionOverrides: [{}, { option: true }],
+  failedConditionRequests: async ({}, use) => { await use(new Set()); },
+  page: async ({ page, context, baseURL, unavailableOceanRisk, conditionOverrides, failedConditionRequests }, use) => {
     const unexpected: string[] = [];
     await page.clock.setFixedTime(NOW);
     await context.route('**/*', async (route) => {
@@ -65,6 +93,10 @@ export const test = base.extend<{ unavailableOceanRisk: boolean }>({
         const match = /^\/api\/conditions\/(\d+)\/(water-quality|ocean-risk|alerts)$/.exec(url.pathname);
         if (match && beaches.some((beach) => beach.id === Number(match[1]))) {
           const beachId = Number(match[1]);
+          const category = match[2] as ConditionCategory;
+          if (failedConditionRequests.has(`${beachId}/${category}`)) {
+            return route.fulfill({ status: 503, json: { message: 'Synthetic condition failure' } });
+          }
           const risk: OceanRiskResponse = unavailableOceanRisk
             ? { ...oceanRisk, beachId, status: 'unknown', availability: 'unavailable',
                 summary: 'No published risk for this fixture.', forecastPeriod: null,
@@ -72,7 +104,7 @@ export const test = base.extend<{ unavailableOceanRisk: boolean }>({
             : { ...(beachId === 2 ? selectedOceanRisk : oceanRisk), beachId };
           const json = match[2] === 'water-quality' ? (beachId === 2 ? selectedWaterQuality : waterQuality)
             : match[2] === 'ocean-risk' ? risk : { ...(beachId === 2 ? selectedAlerts : alerts), beachId };
-          return route.fulfill({ json });
+          return route.fulfill({ json: conditionOverrides[beachId]?.[category] ?? json });
         }
         if (url.pathname === '/' || url.pathname.startsWith('/assets/')) return route.continue();
       }
