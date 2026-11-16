@@ -5,6 +5,8 @@ build/
 .env.*
 !.env.example
 coverage/
+frontend/playwright-report/
+frontend/test-results/
 *.tsbuildinfo
 *.log
 tests/load/results/*
