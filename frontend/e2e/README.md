@@ -1,4 +1,4 @@
-# Playwright discovery and conditions suite (Issue #42, Stages 1-3)
+# Playwright discovery and conditions suite (Issue #42, Stages 1-4)
 
 From `frontend`:
 
@@ -102,7 +102,7 @@ cards do not independently age an available payload based on its timestamp.
 Water quality does have a client-side age guard, covered separately. These tests
 do not verify live ingestion, backend freshness calculations, every malformed or
 missing timestamp, all exact age boundaries, or transient out-of-order responses
-while requests are in flight. Stage 4 CI work is not included.
+while requests are in flight.
 
 ## Determinism and isolation
 
@@ -125,13 +125,89 @@ location. The denied case grants an empty permission allowlist and checks Chromi
 state before requesting location. The fallback option is test-local, with no shared
 mutable route state. No arbitrary timeout delays are used.
 
+## GitHub Actions (Stage 4)
+
+The **Frontend CI** workflow in `.github/workflows/frontend-ci.yml` has two
+independent jobs on `ubuntu-latest`, using Node 20 and `npm ci` from `frontend`:
+
+- `build-and-test`: the unchanged production build and Vitest checks.
+- `playwright`: installs only Chromium and its Linux dependencies with
+  `npx playwright install --with-deps chromium`, then runs the existing 20-test
+  suite once with `npm run test:e2e`. It has a 20-minute job timeout and does not
+  depend on the build-and-test job, so browser failures are reported independently.
+
+Both jobs use the existing workflow triggers: `push` and `pull_request` events
+whose changed paths match `frontend/**` or `.github/workflows/frontend-ci.yml`.
+There is no additional branch filter or manual dispatch trigger. Permissions and
+concurrency settings are unchanged. A push and a pull-request event can each
+produce a workflow run; each run executes the suite once.
+
+The Playwright configuration builds with `VITE_API_URL=/api` and starts/stops Vite
+preview itself. The job does not start another server or separately run the build
+or Vitest. Its internal build is required for the isolated browser job. Fixtures,
+request blocking, tile responses, browser clock, and geolocation behavior are
+unchanged. No backend, PostgreSQL, or live condition/tile services are needed;
+installing npm packages, Chromium, and Linux packages still requires network access.
+
+### Inspecting failed CI runs
+
+In GitHub, open **Actions > Frontend CI > the failed run > playwright** and inspect
+**Run Playwright tests** for failed test names and assertions. Installation failures
+appear in their respective setup steps.
+
+The **Upload Playwright failure artifacts** step uses `actions/upload-artifact@v4`
+with `if: failure()`. The run summary's **Artifacts** section contains
+`playwright-failure-artifacts`, retained for **7 days**, when files were generated.
+It includes the actual configured/default output directories:
+
+- `frontend/playwright-report/`: HTML report and its supporting files.
+- `frontend/test-results/`: retained failure traces, failure screenshots, and other
+  non-hidden test-result files such as error context, when available.
+
+Upload-action paths are relative to the repository root; the `frontend` default
+working directory applies only to shell steps. With both directories present,
+the downloaded archive contains `playwright-report/` and `test-results/` at its root.
+Extract the artifact and, from `frontend`, use the extracted absolute paths:
+
+```powershell
+npx.cmd playwright show-report C:\path\to\extracted\playwright-report
+npx.cmd playwright show-trace C:\path\to\extracted\test-results\CASE\trace.zip
+```
+
+Open PNG screenshots directly. Keep the complete report directory together.
+Artifacts are uploaded only on failure; `if-no-files-found: ignore` avoids an error
+if setup failed before artifacts existed. Cancellation or the job timeout may
+prevent upload, and hidden files (such as `.last-run.json`) are not included.
+
+### Reproducing a CI failure
+
+Use Node 20 and the committed lockfile. On a supported Linux machine, from
+`frontend`, run the same browser-job commands:
+
+```bash
+npm ci
+npx playwright install --with-deps chromium
+CI=true npm run test:e2e
+```
+
+The Linux dependency installation may require sudo privileges. For the separate
+build-and-test job, run `npm run build` and `npm test`. On Windows, use the local
+commands at the top of this document; optionally set `$env:CI = 'true'` before the
+Playwright run to match its CI-only focused-test guard. Use the failed test's title
+with `npx.cmd playwright test --grep "TITLE"` for a focused reproduction.
+
+Local Windows results do not verify Linux runner setup or artifact uploads. The
+first GitHub run must confirm runner installation, workflow execution, and artifact
+behavior on an actual failed run. No GitHub Actions success is claimed from local
+verification alone.
+
 ## Limits and artifacts
 
 The 35 catalog entries are synthetic and prove browser rendering only. Independently
 verifying at least 35 official DRNA locations remains outside this suite and has
 not been demonstrated here. These cases do not establish the accuracy of live
 conditions, external source availability, other browser behavior, or ingestion.
-No production UI changes were needed. GitHub Actions integration belongs to Stage 4.
+No production UI changes were needed.
 
 Vitest retains its existing `.test`/`.spec` discovery; Playwright uses `.e2e.ts`.
 Failure artifacts are under `test-results/` and the HTML report under
