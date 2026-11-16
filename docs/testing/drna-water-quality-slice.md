@@ -64,7 +64,7 @@ npm test
 
 ## Continuous integration
 
-`.github/workflows/backend-ci.yml` and `frontend-ci.yml` run `npm ci`, `npm run build`, and `npm test` on Node 20. They run for every push and pull request that changes files under `backend/` or `frontend/` (or the workflow file itself). An integration pull request that touches both applications therefore runs both workflows.
+`.github/workflows/backend-ci.yml` and `frontend-ci.yml` run `npm ci`, `npm run lint`, `npm run audit:security`, `npm run build`, and `npm test` on Node 22. They run for every push and pull request that changes files under `backend/` or `frontend/` (or the workflow file itself). An integration pull request that touches both applications therefore runs both workflows. The frontend also runs Playwright; the separate security workflow scans committed history for secrets. See [security checks](security-checks.md) for scope and residual findings.
 
 ## Manual demonstration: Pico de Piedra (RW-22)
 

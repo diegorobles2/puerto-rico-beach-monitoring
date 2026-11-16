@@ -26,7 +26,7 @@ docs/testing/             Schedulers, API states, CI, and verification
 
 ## Prerequisites
 
-- Node.js 20 or later and npm
+- Node.js 22.13+ in the Node 22 line (recommended), or Node 24+, and npm
 - A Supabase PostgreSQL project for application data
 - Network access to Supabase, DRNA, and api.weather.gov
 - Docker with PostgreSQL 16 only if reproducing the optional local database-integration tests
