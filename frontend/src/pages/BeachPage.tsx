@@ -8,8 +8,9 @@ import { BeachMap } from '../components/map/BeachMap';
 import { OceanRiskCard } from '../components/status/OceanRiskCard';
 import { AlertsCard } from '../components/status/AlertsCard';
 import { WaterQualityCard } from '../components/status/WaterQualityCard';
-import { getAlerts, getOceanRisk, getBeachConditions, getBeaches } from '../services/beachApi';
-import type { AlertsResponse, OceanRiskResponse, Beach, WaterQualityCondition } from '../types';
+import { WeatherCard } from '../components/status/WeatherCard';
+import { getAlerts, getOceanRisk, getBeachConditions, getBeaches, getWeather } from '../services/beachApi';
+import type { AlertsResponse, OceanRiskResponse, Beach, WaterQualityCondition, WeatherResponse } from '../types';
 
 interface Resource<T> { data?: T; loading: boolean; error?: string }
 
@@ -22,6 +23,7 @@ export function BeachPage() {
   const [error, setError] = useState<string | null>(null);
   const [risks, setRisks] = useState<Record<string, Resource<OceanRiskResponse>>>({});
   const [alerts, setAlerts] = useState<Record<string, Resource<AlertsResponse>>>({});
+  const [weather, setWeather] = useState<Record<string, Resource<WeatherResponse>>>({});
   const [refresh, setRefresh] = useState(0);
   const [query, setQuery] = useState('');
   const [municipality, setMunicipality] = useState('');
@@ -48,6 +50,17 @@ export function BeachPage() {
     const controller = new AbortController();
     setRisks(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
     setAlerts(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
+    setWeather(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
+    void getWeather(id, controller.signal).then(data => {
+      if (!controller.signal.aborted) setWeather(previous => {
+        const last = previous[id]?.data;
+        const next: WeatherResponse = !data.forecast && last?.forecast
+          ? { ...last, availability: 'stale', unavailableReason: data.unavailableReason } : data;
+        return { ...previous, [id]: { data: next, loading: false } };
+      });
+    }).catch(() => {
+      if (!controller.signal.aborted) setWeather(previous => ({ ...previous, [id]: { ...previous[id], loading: false, error: 'Unable to load weather forecast' } }));
+    });
     void getOceanRisk(id, controller.signal).then(data => {
       if (!controller.signal.aborted) setRisks(previous => ({ ...previous, [id]: { data, loading: false } }));
     }).catch(() => {
@@ -173,6 +186,7 @@ export function BeachPage() {
         <WaterQualityCard condition={condition} loading={loading} error={error} />
         <OceanRiskCard condition={risks[String(selectedBeachId)]?.data} loading={risks[String(selectedBeachId)]?.loading} error={risks[String(selectedBeachId)]?.error} />
         <AlertsCard response={alerts[String(selectedBeachId)]?.data} loading={alerts[String(selectedBeachId)]?.loading} error={alerts[String(selectedBeachId)]?.error} />
+        <WeatherCard condition={weather[String(selectedBeachId)]?.data} loading={weather[String(selectedBeachId)]?.loading} error={weather[String(selectedBeachId)]?.error} />
       </div>
       {selectedBeachId != null && <button type="button" className="rounded border border-slate-400 px-4 py-2" onClick={() => setRefresh(value => value + 1)}>Refresh NWS data</button>}
     </main>

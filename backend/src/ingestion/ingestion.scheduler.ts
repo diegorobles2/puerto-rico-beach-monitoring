@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { DATABASE } from '../database/database.module';
 import { NwsIngestionService } from './nws-ingestion.service';
 import { IngestionService } from './ingestion.service';
+import { WeatherService } from '../conditions/weather.service';
 
 import { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from './refresh-intervals';
 export { DRNA_REFRESH_INTERVAL_MS, NWS_REFRESH_INTERVAL_MS } from './refresh-intervals';
@@ -20,6 +21,7 @@ export class IngestionScheduler implements OnModuleDestroy {
     @Inject(DATABASE) private readonly db: Knex,
     private readonly nws: NwsIngestionService,
     private readonly drna: IngestionService,
+    private readonly weather: WeatherService,
   ) {}
 
   start(): void {
@@ -93,6 +95,10 @@ export class IngestionScheduler implements OnModuleDestroy {
         'NWS refresh failed; retrying on the next scheduled tick',
       );
     } finally {
+      try {
+        const weather = await this.weather.refreshCached();
+        if (weather.failed) this.logger.warn(`${weather.failed}/${weather.attempted} cached weather refreshes failed`);
+      } catch { this.logger.warn('Cached weather refresh failed'); }
       await this.recordScheduledRun('nws', startedAt, succeeded, publishedAt);
       this.running = false;
     }

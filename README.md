@@ -7,6 +7,7 @@ A beach-centered decision-support app that combines DRNA water-quality measureme
 - DRNA PDF ingestion and PostgreSQL persistence are implemented.
 - NWS forecast-zone mapping, reviewed coordinate fallbacks, risk/alert ingestion, and persistence are implemented.
 - Public REST endpoints serve water-quality, ocean-risk, and alert information from stored data.
+- NWS weather forecasts use exact-coordinate point mappings and a server-side cache; the weather card stays separate from water quality and ocean risk. See [weather coverage and cache policy](docs/testing/nws-weather.md).
 - DRNA and NWS ingestion run automatically while the backend server is running. One-shot commands remain available for setup and manual refreshes.
 - Authentication and community-report submission are not implemented.
 

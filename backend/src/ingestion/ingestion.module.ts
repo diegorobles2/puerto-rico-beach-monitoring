@@ -5,9 +5,10 @@ import { IngestionService } from './ingestion.service';
 import { NwsMappingService } from './nws-mapping.service';
 import { NwsPersistenceService } from './nws-persistence.service';
 import { NwsIngestionService } from './nws-ingestion.service';
+import { ConditionsModule } from '../conditions/conditions.module';
 
 @Module({
-  imports: [DataSourcesModule],
+  imports: [DataSourcesModule, ConditionsModule],
   providers: [
     IngestionService,
     IngestionScheduler,

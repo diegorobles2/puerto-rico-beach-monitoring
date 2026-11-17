@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import type { AlertsResponse, Beach, OceanRiskResponse, WaterQualityCondition } from '../src/types';
+import type { AlertsResponse, Beach, OceanRiskResponse, WaterQualityCondition, WeatherResponse } from '../src/types';
 
 export const NOW = new Date('2026-11-13T12:00:00Z');
 // Synthetic browser coverage only: these are not verified official DRNA locations.
@@ -60,11 +60,23 @@ export const unavailableWaterQuality: WaterQualityCondition = {
   observedAt: null, retrievedAt: null,
 };
 
-type ConditionCategory = 'water-quality' | 'ocean-risk' | 'alerts';
+export const weather: WeatherResponse = {
+  beachId: 1, availability: 'available', source: 'NWS',
+  observedAt: '2026-11-13T10:00:00Z', retrievedAt: '2026-11-13T11:00:00Z',
+  sourceUrl: 'https://api.weather.gov/gridpoints/SJU/163,132/forecast',
+  forecast: {
+    name: 'Today', validFrom: '2026-11-13T06:00:00Z', validTo: '2026-11-14T06:00:00Z',
+    temperature: 80, temperatureUnit: 'F', windSpeed: '6 to 9 mph', windDirection: 'E',
+    precipitationProbabilityPercent: 30, shortForecast: 'Synthetic showers', detailedForecast: 'Synthetic fixture weather, not live conditions.',
+  },
+};
+
+type ConditionCategory = 'water-quality' | 'ocean-risk' | 'alerts' | 'weather';
 export type ConditionOverrides = Record<number, Partial<{
   'water-quality': WaterQualityCondition;
   'ocean-risk': OceanRiskResponse;
   alerts: AlertsResponse;
+  weather: WeatherResponse;
 }>>;
 type ConditionFixtures = {
   unavailableOceanRisk: boolean;
@@ -90,7 +102,7 @@ export const test = base.extend<ConditionFixtures>({
       }
       if (url.origin === baseURL && request.method() === 'GET') {
         if (url.pathname === '/api/beaches') return route.fulfill({ json: beaches });
-        const match = /^\/api\/conditions\/(\d+)\/(water-quality|ocean-risk|alerts)$/.exec(url.pathname);
+        const match = /^\/api\/conditions\/(\d+)\/(water-quality|ocean-risk|alerts|weather)$/.exec(url.pathname);
         if (match && beaches.some((beach) => beach.id === Number(match[1]))) {
           const beachId = Number(match[1]);
           const category = match[2] as ConditionCategory;
@@ -103,7 +115,9 @@ export const test = base.extend<ConditionFixtures>({
                 observedAt: null, sourceUrl: undefined, unavailableReason: 'no-data' }
             : { ...(beachId === 2 ? selectedOceanRisk : oceanRisk), beachId };
           const json = match[2] === 'water-quality' ? (beachId === 2 ? selectedWaterQuality : waterQuality)
-            : match[2] === 'ocean-risk' ? risk : { ...(beachId === 2 ? selectedAlerts : alerts), beachId };
+            : match[2] === 'ocean-risk' ? risk : match[2] === 'weather' ? { ...weather, beachId,
+                forecast: { ...weather.forecast!, temperature: beachId === 2 ? 88 : 80 } }
+            : { ...(beachId === 2 ? selectedAlerts : alerts), beachId };
           return route.fulfill({ json: conditionOverrides[beachId]?.[category] ?? json });
         }
         if (url.pathname === '/' || url.pathname.startsWith('/assets/')) return route.continue();

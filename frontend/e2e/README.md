@@ -128,11 +128,11 @@ mutable route state. No arbitrary timeout delays are used.
 ## GitHub Actions (Stage 4)
 
 The **Frontend CI** workflow in `.github/workflows/frontend-ci.yml` has two
-independent jobs on `ubuntu-latest`, using Node 20 and `npm ci` from `frontend`:
+independent jobs on `ubuntu-latest`, using Node 22 and `npm ci` from `frontend`:
 
 - `build-and-test`: the unchanged production build and Vitest checks.
 - `playwright`: installs only Chromium and its Linux dependencies with
-  `npx playwright install --with-deps chromium`, then runs the existing 20-test
+  `npx playwright install --with-deps chromium`, then runs the 32-test
   suite once with `npm run test:e2e`. It has a 20-minute job timeout and does not
   depend on the build-and-test job, so browser failures are reported independently.
 
@@ -181,7 +181,7 @@ prevent upload, and hidden files (such as `.last-run.json`) are not included.
 
 ### Reproducing a CI failure
 
-Use Node 20 and the committed lockfile. On a supported Linux machine, from
+Use Node 22 and the committed lockfile. On a supported Linux machine, from
 `frontend`, run the same browser-job commands:
 
 ```bash

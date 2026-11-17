@@ -1,7 +1,7 @@
 import type { BrowserContext, Page } from '@playwright/test';
 import {
   alerts, oceanRisk, selectedAlerts, selectedWaterQuality, staleOceanRisk, staleWaterQuality,
-  unavailableWaterQuality, waterQuality, type ConditionOverrides,
+  unavailableWaterQuality, waterQuality, weather, type ConditionOverrides,
 } from './fixtures';
 
 // Only the usability sessions/tests opt into these overrides; normal builds never import them.
@@ -39,7 +39,7 @@ export async function openUsabilitySession(page: Page, context: BrowserContext) 
       document.title = 'Synthetic O4 usability session';
     });
   });
-  const sourceUrls = [waterQuality.sourceUrl!, oceanRisk.sourceUrl!, selectedAlerts.alerts![0].sourceUrl!];
+  const sourceUrls = [waterQuality.sourceUrl!, oceanRisk.sourceUrl!, selectedAlerts.alerts![0].sourceUrl!, weather.sourceUrl!];
   for (const url of sourceUrls) {
     await context.route(url, route => route.fulfill({ contentType: 'text/html', body:
       '<!doctype html><title>Synthetic source reference</title><h1>Synthetic usability fixture</h1><p>This intercepted link demonstrates source navigation only. It is not an official report or forecast. Close this tab to return to the tasks.</p>' }));
