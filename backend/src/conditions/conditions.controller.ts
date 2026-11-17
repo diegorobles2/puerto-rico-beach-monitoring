@@ -1,4 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
+import { BeachIdPipe } from './beach-id.pipe';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -17,7 +18,7 @@ import { NwsConditionsService } from './nws-conditions.service';
   description: 'The requested beach identifier was not found.',
 })
 @ApiBadRequestResponse({
-  description: 'The beach identifier is not a number.',
+  description: 'The beach identifier is not a positive safe integer.',
 })
 @Controller('conditions')
 export class ConditionsController {
@@ -36,7 +37,7 @@ export class ConditionsController {
     type: WaterQualityResponseDto,
   })
   getWaterQuality(
-    @Param('beachId', ParseIntPipe) beachId: number,
+    @Param('beachId', BeachIdPipe) beachId: number,
   ): Promise<WaterQualityResponseDto> {
     return this.service.getWaterQuality(beachId);
   }
@@ -53,7 +54,7 @@ export class ConditionsController {
     type: OceanRiskResponseDto,
   })
   getOceanRisk(
-    @Param('beachId', ParseIntPipe) beachId: number,
+    @Param('beachId', BeachIdPipe) beachId: number,
   ): Promise<OceanRiskResponseDto> {
     return this.nws.getOceanRisk(beachId);
   }
@@ -69,7 +70,7 @@ export class ConditionsController {
     type: AlertsResponseDto,
   })
   getAlerts(
-    @Param('beachId', ParseIntPipe) beachId: number,
+    @Param('beachId', BeachIdPipe) beachId: number,
   ): Promise<AlertsResponseDto> {
     return this.nws.getAlerts(beachId);
   }
