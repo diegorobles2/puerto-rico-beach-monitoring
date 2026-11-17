@@ -83,16 +83,11 @@ export class NwsService {
       throw new Error(`Unable to retrieve NWS ${label}`);
     }
     if (!response.ok) throw new Error(`NWS ${label} returned HTTP ${response.status}`);
-    let payload: unknown;
     try {
-      payload = await response.json();
+      return await response.json() as T;
     } catch {
       throw new Error(`NWS ${label} returned malformed JSON`);
     }
-    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
-      throw new Error(`NWS ${label} response is malformed`);
-    }
-    return payload as T;
   }
 }
 

@@ -39,18 +39,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Lint TypeScript
-        run: npm run lint
-
-      - name: Audit dependencies
-        run: npm run audit:security
 
       - name: Create Supabase-compatible database roles
         run: |

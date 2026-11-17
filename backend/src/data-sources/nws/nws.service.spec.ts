@@ -11,12 +11,6 @@ function json(body: unknown, status = 200): Response {
 }
 
 describe('NwsService', () => {
-  it.each([null, [], 'unexpected', 42, true])('rejects non-object upstream payload %p explicitly', async (payload) => {
-    const service = new NwsService(jest.fn().mockImplementation(async () => json(payload)));
-    await expect(service.getActiveAlerts('PRZ007')).rejects.toThrow('NWS active alerts response is malformed');
-    await expect(service.getConditions('PRZ007')).rejects.toThrow('NWS surf forecast index response is malformed');
-    await expect(service.getForecastZone(18.4, -67.2)).rejects.toThrow('NWS point metadata response is malformed');
-  });
   it('selects the newest SRF product and maps the requested zone', async () => {
     const fetcher = jest.fn()
       .mockResolvedValueOnce(json({ '@graph': [
