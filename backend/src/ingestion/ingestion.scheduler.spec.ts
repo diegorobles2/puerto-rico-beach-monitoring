@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { DRNA_REFRESH_INTERVAL_MS, IngestionScheduler, NWS_REFRESH_INTERVAL_MS } from './ingestion.scheduler';
 import { NwsIngestionService } from './nws-ingestion.service';
 import { IngestionService } from './ingestion.service';
+import { WeatherService } from '../conditions/weather.service';
 
 describe('IngestionScheduler', () => {
   let scheduler: IngestionScheduler;
@@ -9,6 +10,7 @@ describe('IngestionScheduler', () => {
   let refreshZones: jest.Mock;
   let refreshDrna: jest.Mock;
   let historyInsert: jest.Mock;
+  let refreshWeather: jest.Mock;
   const originalNwsEnabled = process.env.NWS_SCHEDULER_ENABLED;
   const originalDrnaEnabled = process.env.DRNA_SCHEDULER_ENABLED;
 
@@ -36,7 +38,9 @@ describe('IngestionScheduler', () => {
     });
     refreshZones = jest.fn().mockResolvedValue({ attempted: 2, failed: 0 });
     refreshDrna = jest.fn().mockResolvedValue(undefined);
-    scheduler = new IngestionScheduler(db as never, { refreshZones } as unknown as NwsIngestionService, { refresh: refreshDrna } as unknown as IngestionService);
+    refreshWeather = jest.fn().mockResolvedValue({ attempted: 0, failed: 0 });
+    scheduler = new IngestionScheduler(db as never, { refreshZones } as unknown as NwsIngestionService,
+      { refresh: refreshDrna } as unknown as IngestionService, { refreshCached: refreshWeather } as unknown as WeatherService);
   });
 
   afterEach(() => {
@@ -56,6 +60,7 @@ describe('IngestionScheduler', () => {
     expect(refreshZones).toHaveBeenCalledWith(['PRZ001']);
     await jest.advanceTimersByTimeAsync(NWS_REFRESH_INTERVAL_MS);
     expect(refreshZones).toHaveBeenCalledTimes(2);
+    expect(refreshWeather).toHaveBeenCalledTimes(2);
     scheduler.onModuleDestroy();
     await jest.advanceTimersByTimeAsync(NWS_REFRESH_INTERVAL_MS);
     expect(refreshZones).toHaveBeenCalledTimes(2);
@@ -225,5 +230,14 @@ describe('IngestionScheduler', () => {
 
     expect(refreshDrna).toHaveBeenCalledTimes(2);
     expect(historyInsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('isolates weather refresh failures from surf/alert refresh results', async () => {
+    refreshWeather.mockRejectedValueOnce(new Error('weather offline'));
+    await expect(scheduler.tick()).resolves.toBeUndefined();
+    expect(Logger.prototype.warn).toHaveBeenCalledWith('Cached weather refresh failed');
+    expect(historyInsert).toHaveBeenLastCalledWith(expect.objectContaining({ source: 'nws', succeeded: true }));
+    await scheduler.tick();
+    expect(refreshWeather).toHaveBeenCalledTimes(2);
   });
 });

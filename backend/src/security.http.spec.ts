@@ -7,6 +7,8 @@ import { ConditionsController } from './conditions/conditions.controller';
 import { ConditionsService } from './conditions/conditions.service';
 import { NwsConditionsService } from './conditions/nws-conditions.service';
 import { configureHttp } from './configure-http';
+import { WeatherController } from './conditions/weather.controller';
+import { WeatherService } from './conditions/weather.service';
 
 describe('Public API security boundaries', () => {
   let app: INestApplication;
@@ -17,10 +19,11 @@ describe('Public API security boundaries', () => {
     previousOrigin = process.env.FRONTEND_URL;
     process.env.FRONTEND_URL = 'https://beaches.example';
     const module = await Test.createTestingModule({
-      controllers: [ConditionsController],
+      controllers: [ConditionsController, WeatherController],
       providers: [
         { provide: ConditionsService, useValue: { getWaterQuality: get } },
         { provide: NwsConditionsService, useValue: { getOceanRisk: get, getAlerts: get } },
+        { provide: WeatherService, useValue: { getWeather: get } },
       ],
     }).compile();
     app = module.createNestApplication();
@@ -34,7 +37,7 @@ describe('Public API security boundaries', () => {
     else process.env.FRONTEND_URL = previousOrigin;
   });
 
-  for (const category of ['water-quality', 'ocean-risk', 'alerts']) {
+  for (const category of ['water-quality', 'ocean-risk', 'alerts', 'weather']) {
     it.each(['0', '-1', '1.5', '1e2', 'Infinity', '9223372036854775808', '9007199254740993', 'RW-22', "1' OR 1=1"])(
       `rejects malformed ${category} ID %s before the service`, async (id) => {
         await request(app.getHttpServer()).get(`/conditions/${encodeURIComponent(id)}/${category}`).expect(400);

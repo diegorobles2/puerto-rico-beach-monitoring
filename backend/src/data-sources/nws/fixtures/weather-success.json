@@ -1,0 +1,18 @@
+{
+  "fixtureDescription": "Synthetic SJU forecast using the official NWS forecast schema; not live weather evidence.",
+  "properties": {
+    "updateTime": "2026-11-17T00:00:00Z",
+    "periods": [{
+      "name": "Tonight",
+      "startTime": "2026-11-17T00:00:00Z",
+      "endTime": "2026-11-17T12:00:00Z",
+      "temperature": 81,
+      "temperatureUnit": "F",
+      "windSpeed": "6 to 9 mph",
+      "windDirection": "E",
+      "probabilityOfPrecipitation": { "unitCode": "wmoUnit:percent", "value": 30 },
+      "shortForecast": "Scattered Rain Showers",
+      "detailedForecast": "Synthetic scattered rain showers and east winds."
+    }]
+  }
+}

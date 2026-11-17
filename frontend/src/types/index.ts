@@ -94,3 +94,26 @@ export interface CommunityReport {
   createdAt: string;
 }
 
+export interface WeatherForecast {
+  name: string;
+  validFrom: string;
+  validTo: string;
+  temperature: number;
+  temperatureUnit: 'C' | 'F';
+  windSpeed: string;
+  windDirection: string;
+  precipitationProbabilityPercent: number | null;
+  shortForecast: string;
+  detailedForecast: string;
+}
+export interface WeatherResponse {
+  beachId: number;
+  availability: 'available' | 'stale' | 'unavailable';
+  forecast: WeatherForecast | null;
+  source: 'NWS';
+  sourceUrl?: string;
+  observedAt: string | null;
+  retrievedAt: string | null;
+  unavailableReason?: 'unsupported-location' | 'no-forecast' | 'upstream-error';
+}
+
