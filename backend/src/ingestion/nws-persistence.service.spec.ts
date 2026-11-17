@@ -295,8 +295,8 @@ describeDatabase('NWS persistence integration', () => {
 
   it('preserves last-known condition and alert records after a failure', async () => {
     const zoneId = 'PRZ991';
-    const successTime = '2026-10-16T12:00:00.000Z';
-    const failureTime = '2026-10-16T13:00:00.000Z';
+    const failureTime = new Date().toISOString();
+    const successTime = new Date(Date.parse(failureTime) - 60 * 60 * 1000).toISOString();
     const alertId = 'test-nws-alert-991';
 
     const previous = await db('nws_source_health').where({ zone_id: zoneId });
