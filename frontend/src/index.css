@@ -12,3 +12,41 @@ body {
   font-family: system-ui, sans-serif;
 }
 
+/* One high-contrast focus ring for every keyboard-focusable element, including Leaflet controls. */
+:focus-visible {
+  outline: 3px solid #0369a1;
+  outline-offset: 2px;
+}
+
+/* Beach markers: selection is shown by size and a dark ring, not color alone. */
+.beach-marker {
+  box-sizing: border-box;
+  border-radius: 9999px;
+  border: 3px solid #ffffff;
+  background: #0369a1;
+  box-shadow: 0 0 0 1px #0f172a;
+  cursor: pointer;
+}
+
+.beach-marker--selected {
+  background: #b45309;
+  box-shadow: 0 0 0 3px #0f172a;
+}
+
+.beach-marker:focus-visible {
+  outline: 3px solid #0f172a;
+  outline-offset: 3px;
+}
+
+/* Leaflet's zoom buttons are 30px; keep them at least 44px for touch. */
+.leaflet-touch .leaflet-bar a,
+.leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+}
+
+/* Attribution links sit inside text, so they need more than color to stand out. */
+.leaflet-control-attribution a {
+  text-decoration: underline;
+}
