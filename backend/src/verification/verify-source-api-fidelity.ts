@@ -5,10 +5,7 @@ import { Test } from '@nestjs/testing';
 import request = require('supertest');
 import { ConditionsController } from '../conditions/conditions.controller';
 import { ConditionsService } from '../conditions/conditions.service';
-import {
-  NWS_CONDITIONS_CLOCK,
-  NwsConditionsService,
-} from '../conditions/nws-conditions.service';
+import { NwsConditionsService } from '../conditions/nws-conditions.service';
 import { mapNwsAlerts, mapNwsCondition } from '../data-sources/nws/nws.mapper';
 import type { NwsAlertCollection, NwsSurfForecastProduct } from '../data-sources/nws/nws.types';
 import { parseMonitoringRecords } from '../data-sources/drna/drna.service';
@@ -117,9 +114,11 @@ export async function verifySourceApiFidelity(options: FidelityRunOptions = {}):
     controllers: [ConditionsController],
     providers: [
       ConditionsService,
-      NwsConditionsService,
       { provide: DATABASE, useValue: db },
-      { provide: NWS_CONDITIONS_CLOCK, useValue: () => new Date(manifest.nwsReplayAsOf) },
+      {
+        provide: NwsConditionsService,
+        useValue: new NwsConditionsService(db as never, () => new Date(manifest.nwsReplayAsOf)),
+      },
     ],
   }).compile();
   const app = moduleRef.createNestApplication();
