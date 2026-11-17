@@ -10,7 +10,10 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "lint": "eslint \"**/*.{ts,tsx}\" --max-warnings 0",
-    "audit:security": "npm audit --audit-level=high"
+    "audit:security": "npm audit --audit-level=high",
+    "test:usability": "node --test ../tests/usability/results.test.mjs",
+    "usability:session": "playwright test --config playwright.usability.config.ts",
+    "usability:summary": "node ../tests/usability/results.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

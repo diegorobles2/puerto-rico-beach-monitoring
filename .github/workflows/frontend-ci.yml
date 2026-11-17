@@ -2,9 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    paths: ["frontend/**", ".github/workflows/frontend-ci.yml"]
+    paths: ["frontend/**", "tests/usability/**", ".github/workflows/frontend-ci.yml"]
   pull_request:
-    paths: ["frontend/**", ".github/workflows/frontend-ci.yml"]
+    paths: ["frontend/**", "tests/usability/**", ".github/workflows/frontend-ci.yml"]
 
 jobs:
   build-and-test:
@@ -24,6 +24,7 @@ jobs:
       - run: npm run audit:security
       - run: npm run build
       - run: npm test
+      - run: npm run test:usability
 
   playwright:
     runs-on: ubuntu-latest

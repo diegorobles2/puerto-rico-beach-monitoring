@@ -11,6 +11,8 @@ frontend/test-results/
 *.log
 tests/load/results/*
 !tests/load/results/.gitkeep
+tests/usability/results/*
+!tests/usability/results/.gitkeep
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

@@ -61,7 +61,7 @@ export const unavailableWaterQuality: WaterQualityCondition = {
 };
 
 type ConditionCategory = 'water-quality' | 'ocean-risk' | 'alerts';
-type ConditionOverrides = Record<number, Partial<{
+export type ConditionOverrides = Record<number, Partial<{
   'water-quality': WaterQualityCondition;
   'ocean-risk': OceanRiskResponse;
   alerts: AlertsResponse;
