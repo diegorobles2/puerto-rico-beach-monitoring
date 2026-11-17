@@ -9,3 +9,4 @@ Frontend unit tests use Vitest and React Testing Library. Backend unit and HTTP 
 - [Automatic NWS ingestion](nws-scheduler.md): scheduler configuration, overlap behavior, and local verification.
 - [Automatic DRNA ingestion](drna-scheduler.md): six-hour refreshes, independent configuration, and verification.
 - [Local PostgreSQL integration tests](postgres-integration.md): reproduce backend CI with isolated Docker databases, required roles, migrations, and the full test suite.
+- [O4 usability tooling](../../tests/usability/README.md): six-task fixtures, local manual sessions, anonymous result validation, and fixed-denominator scoring.

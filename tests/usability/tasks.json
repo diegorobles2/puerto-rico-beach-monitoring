@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "objective": "O4",
+  "proposalSection": "3.3 Objective-to-Test Traceability",
+  "thresholdPercent": 90,
+  "defaultEvaluators": 10,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Find a beach",
+      "prompt": "Find Fixture Beach 02 in San Juan using the discovery controls.",
+      "completionCriteria": "The evaluator selects Fixture Beach 02 and identifies San Juan as its municipality. Search and municipality filtering produce the matching result.",
+      "beachIds": [2]
+    },
+    {
+      "id": "T2",
+      "title": "Identify water quality",
+      "prompt": "What is the current water-quality status at Fixture Beach 01? What measurement supports it?",
+      "completionCriteria": "The evaluator identifies a current water-quality advisory and the displayed Enterococcus value of 231 colonies/100 mL, using the water-quality card.",
+      "beachIds": [1]
+    },
+    {
+      "id": "T3",
+      "title": "Identify ocean risk",
+      "prompt": "What ocean risk and alert information are shown for Fixture Beach 02?",
+      "completionCriteria": "The evaluator identifies high current rip-current risk and the active synthetic coastal warning, using the NWS cards.",
+      "beachIds": [2]
+    },
+    {
+      "id": "T4",
+      "title": "Distinguish the two hazards",
+      "prompt": "Does the water-quality result at Fixture Beach 02 mean swimming is safe? Explain using both condition categories.",
+      "completionCriteria": "The evaluator distinguishes the suitable water-quality sample from high ocean risk and does not interpret the water-quality result as an overall safety guarantee.",
+      "beachIds": [2]
+    },
+    {
+      "id": "T5",
+      "title": "Find source and timestamp information",
+      "prompt": "At Fixture Beach 01, find the source and observation/retrieval dates for water quality and ocean risk. Show where the source links are.",
+      "completionCriteria": "The evaluator identifies DRNA versus NWS, locates each category's source link and observation/retrieval dates, and distinguishes sample/issuance time from retrieval time.",
+      "beachIds": [1]
+    },
+    {
+      "id": "T6",
+      "title": "Recognize advisory, old, and missing information",
+      "prompt": "Compare Fixture Beaches 01, 03, 04, and 05. Which information is a current advisory, historical, missing, or unavailable because a forecast mapping is absent? Can unknown information establish safety?",
+      "completionCriteria": "The evaluator distinguishes Beach 01's current advisory, Beach 03's stale historical measurements, Beach 04's missing water quality, and Beach 05's unavailable ocean risk. They do not interpret stale or unavailable information as current clearance. The interface does not currently expose a separate not-monitored water-quality label.",
+      "beachIds": [1, 3, 4, 5]
+    }
+  ]
+}
