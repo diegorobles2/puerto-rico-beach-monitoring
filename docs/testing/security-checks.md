@@ -41,11 +41,27 @@ reach production code. Each entry needs a GHSA `id`, the vulnerable `package`, a
   removes the entry or sets a new date with an updated reason.
 - An entry covers only its advisory on its named package; a new high advisory on
   any package still fails.
+- Before allowing an entry, the gate checks every affected dependency path,
+  including transitive dependents, against the current application's lockfile.
+  Every path must explicitly have `dev: true`. Production/shared dependencies,
+  linked dependencies, missing paths, and unsupported/missing lockfiles block
+  the exception. A package moving into production cannot silently keep its waiver.
+- The npm command explicitly includes development dependencies even if local
+  npm configuration normally omits them. Only subprocess exit codes 0 and 1 are
+  valid; errors, signals, other exits, malformed JSON, unsupported report
+  versions, inconsistent counts, and unresolved advisory references fail closed.
+  Dependency cycles are resolved without dropping their underlying advisories.
 - The output prints every allowed advisory with its reason, and a notice when an
   entry no longer matches anything so it can be removed.
 - `node --test scripts/audit-gate.test.mjs` covers these rules and runs in
   Frontend CI. Production-only exposure can be confirmed with
   `npm audit --omit=dev --audit-level=high`.
+
+The gate has 18 offline regression tests, including CLI-level subprocess failure
+and production-exposure cases. Tests also inspect both committed lockfiles to
+confirm their picomatch copies remain development-only. The exposure checks do
+not establish safety for arbitrary untrusted glob patterns; the temporary
+exception still relies on the documented trusted build/test configuration.
 
 | Advisory | Exposure and rationale | Revisit when |
 | --- | --- | --- |
