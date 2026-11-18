@@ -7,8 +7,10 @@ import { test, expect, beaches, selectedBeach, staleOceanRisk, staleWaterQuality
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function expectNoAxeViolations(page: Page) {
-  // Let Leaflet's popup fade-in finish so contrast is measured at full opacity.
-  for (const popup of await page.locator('.leaflet-popup').all()) await expect(popup).toHaveCSS('opacity', '1');
+  // Let Leaflet's popup fades settle so contrast is measured at full opacity. Re-check the live
+  // DOM each time: a popup whose marker was filtered out fades away and is removed.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('.leaflet-popup')].every((popup) => getComputedStyle(popup).opacity === '1'));
   const all = await new AxeBuilder({ page }).withTags(WCAG_TAGS).disableRules(['target-size']).analyze();
   // WCAG 2.5.8 "Equivalent" exception: nearby beach markers can overlap at island zoom, and the
   // same selection is offered by the 44px "Select beach" control. All other targets are checked.
