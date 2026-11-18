@@ -18,7 +18,7 @@
     "test:load": "k6 run ../tests/load/beaches.js",
     "seed:load": "ts-node src/database/seed-load-test.ts",
     "lint": "eslint \"**/*.{ts,tsx}\" --max-warnings 0",
-    "audit:security": "npm audit --audit-level=high"
+    "audit:security": "node ../scripts/audit-gate.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.18",
