@@ -11,7 +11,12 @@ export const DATABASE = Symbol('DATABASE');
       provide: DATABASE,
       useFactory: () => {
         if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
-        return knex({ client: 'pg', connection: process.env.DATABASE_URL, pool: { min: 0, max: 5 } });
+        return knex({
+          client: 'pg',
+          connection: { connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 3000 },
+          acquireConnectionTimeout: 3000,
+          pool: { min: 0, max: 5 },
+        });
       },
     },
   ],

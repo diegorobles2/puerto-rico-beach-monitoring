@@ -1,6 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { isAbsolute, resolve } from 'node:path';
-import type { INestApplication } from '@nestjs/common';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { Test } from '@nestjs/testing';
 import request = require('supertest');
 import { ConditionsController } from '../conditions/conditions.controller';
@@ -43,6 +42,7 @@ interface FidelityManifest {
   version: number;
   minimumAgreementPercent: number;
   drnaReplayRetrievedAt: string;
+  drnaReplayAsOf: string;
   nwsReplayAsOf: string;
   nwsReplayRetrievedAt: string;
   fieldMappings: Record<Provider, FieldMapping[]>;
@@ -95,7 +95,6 @@ interface DatabaseRecords {
 
 const DEFAULT_MANIFEST = resolve(__dirname, 'fixtures/source-api-fidelity.v1.json');
 const BACKEND_ROOT = resolve(__dirname, '../..');
-const PDF_SOURCE_URL = 'https://www.drna.pr.gov/wp-content/uploads/2026/09/Monitoria-de-playas-25-de-Septiembre-de-2026.pdf';
 
 export async function verifySourceApiFidelity(options: FidelityRunOptions = {}): Promise<FidelityReport> {
   const manifestPath = options.manifestPath ?? DEFAULT_MANIFEST;
@@ -113,7 +112,7 @@ export async function verifySourceApiFidelity(options: FidelityRunOptions = {}):
   const moduleRef = await Test.createTestingModule({
     controllers: [ConditionsController],
     providers: [
-      ConditionsService,
+      { provide: ConditionsService, useValue: new ConditionsService(db as never, () => Date.parse(manifest.drnaReplayAsOf)) },
       { provide: DATABASE, useValue: db },
       {
         provide: NwsConditionsService,
@@ -194,7 +193,7 @@ export async function verifySourceApiFidelity(options: FidelityRunOptions = {}):
     matchedComparisons,
     mismatchCount: totalComparisons - matchedComparisons,
     agreementPercent,
-    passed: agreementPercent >= threshold,
+    passed: matchedComparisons * 100 >= threshold * totalComparisons,
     comparisons,
   };
 }
@@ -381,12 +380,18 @@ function sameValue(expected: unknown, actual: unknown): boolean {
 function resolveFixture(relativePath: string): string {
   if (isAbsolute(relativePath)) throw new Error(`Fixture paths must be relative: ${relativePath}`);
   const fixturePath = resolve(BACKEND_ROOT, relativePath);
-  if (!fixturePath.startsWith(`${BACKEND_ROOT}/`)) throw new Error(`Fixture path escapes backend: ${relativePath}`);
+  const fromRoot = relative(BACKEND_ROOT, fixturePath);
+  if (!fromRoot || fromRoot === '..' || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
+    throw new Error(`Fixture path escapes backend: ${relativePath}`);
+  }
   return fixturePath;
 }
 
 function validateManifest(manifest: FidelityManifest): void {
   if (manifest.version !== 1) throw new Error(`Unsupported fidelity manifest version: ${manifest.version}`);
+  for (const key of ['drnaReplayAsOf', 'drnaReplayRetrievedAt', 'nwsReplayAsOf', 'nwsReplayRetrievedAt'] as const) {
+    if (typeof manifest[key] !== 'string' || !Number.isFinite(Date.parse(manifest[key]))) throw new Error(`Invalid replay timestamp: ${key}`);
+  }
   if (!Array.isArray(manifest.cases) || manifest.cases.length === 0) throw new Error('Fidelity manifest contains no cases');
   const ids = new Set<string>();
   for (const testCase of manifest.cases) {

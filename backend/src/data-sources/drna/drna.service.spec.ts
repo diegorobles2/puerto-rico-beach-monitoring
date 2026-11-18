@@ -15,9 +15,7 @@ function response(body: BodyInit, status = 200) {
 }
 
 function service(responses: Response[], extractedText: string | string[] = extractedRow) {
-  const fetcher = jest.fn(async (url: string) => url.startsWith('https://geocoding.geo.census.gov/')
-    ? response(JSON.stringify({ result: { geographies: { Counties: [{ BASENAME: 'Aguada' }] } } }))
-    : responses.shift() ?? response('', 500));
+  const fetcher = jest.fn(async (_url: string) => responses.shift() ?? response('', 500));
   const texts = Array.isArray(extractedText) ? [...extractedText] : [extractedText, extractedText];
   return { service: new DrnaService(fetcher, async () => texts.shift() ?? ''), fetcher };
 }
@@ -91,16 +89,38 @@ describe('findLatestRecord', () => {
     });
   });
 
-  it('uses the Census geography for the station municipality', async () => {
-    const adapter = service([response(archive), response(notification), response(pdf), response(notification), response(pdf)]);
+  it('retrieves DRNA stations without requiring Census geocoding', async () => {
+    const adapter = service([
+      response(archive),
+      response(notification),
+      response(pdf),
+      response(notification),
+      response(pdf),
+    ]);
 
     await expect(adapter.service.getCatalog()).resolves.toMatchObject({
-      stations: [{ stationId: 'RW-22', municipality: 'Aguada' }],
+      stations: [
+        {
+          stationId: 'RW-22',
+          municipality: 'Aguada',
+        },
+      ],
     });
-    expect(adapter.fetcher).toHaveBeenCalledWith(
-      expect.stringContaining('geocoding.geo.census.gov/geocoder/geographies/coordinates'),
-      { signal: expect.any(AbortSignal) },
+
+    expect(adapter.fetcher).not.toHaveBeenCalledWith(
+      expect.stringContaining('geocoding.geo.census.gov'),
+      expect.anything(),
     );
+  });
+
+  it('leaves an unknown station municipality unavailable without guessing from a regional route', async () => {
+    const adapter = service(
+      [response(archive), response(notification), response(pdf), response(notification), response(pdf)],
+      extractedRow.replaceAll('RW-22', 'RW-UNKNOWN'),
+    );
+    await expect(adapter.service.getCatalog()).resolves.toMatchObject({
+      stations: [{ stationId: 'RW-UNKNOWN', municipality: 'Unavailable' }],
+    });
   });
 
   it('discovers coordinate metadata from the oldest DRNA archive page', async () => {

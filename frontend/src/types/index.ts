@@ -14,10 +14,11 @@ export interface Beach {
 }
 
 export type WaterQualityStatus = 'suitable' | 'advisory' | 'unknown';
-export type WaterQualityAvailability = 'available' | 'unavailable';
+export type WaterQualityAvailability = 'available' | 'stale' | 'unavailable';
 
 export interface WaterQualityCondition {
   status: WaterQualityStatus;
+  lastKnownStatus?: WaterQualityStatus;
   source: string;
   sourceUrl?: string | null;
   observedAt: string | null;
@@ -91,5 +92,28 @@ export interface CommunityReport {
   beachId: string;
   summary: string;
   createdAt: string;
+}
+
+export interface WeatherForecast {
+  name: string;
+  validFrom: string;
+  validTo: string;
+  temperature: number;
+  temperatureUnit: 'C' | 'F';
+  windSpeed: string;
+  windDirection: string;
+  precipitationProbabilityPercent: number | null;
+  shortForecast: string;
+  detailedForecast: string;
+}
+export interface WeatherResponse {
+  beachId: number;
+  availability: 'available' | 'stale' | 'unavailable';
+  forecast: WeatherForecast | null;
+  source: 'NWS';
+  sourceUrl?: string;
+  observedAt: string | null;
+  retrievedAt: string | null;
+  unavailableReason?: 'unsupported-location' | 'no-forecast' | 'upstream-error';
 }
 

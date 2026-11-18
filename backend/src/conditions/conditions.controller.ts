@@ -1,4 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
+import { BeachIdPipe } from './beach-id.pipe';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -17,7 +18,7 @@ import { NwsConditionsService } from './nws-conditions.service';
   description: 'The requested beach identifier was not found.',
 })
 @ApiBadRequestResponse({
-  description: 'The beach identifier is not a number.',
+  description: 'The beach identifier is not a positive safe integer.',
 })
 @Controller('conditions')
 export class ConditionsController {
@@ -32,11 +33,11 @@ export class ConditionsController {
   })
   @ApiOkResponse({
     description:
-      'Returns normalized water-quality information. If source data is unavailable, availability is "unavailable" and status is "unknown".',
+      'Returns normalized water-quality information. Old or unusably dated samples return availability "stale", status "unknown", and historical lastKnownStatus. Missing observations return availability "unavailable" and status "unknown".',
     type: WaterQualityResponseDto,
   })
   getWaterQuality(
-    @Param('beachId', ParseIntPipe) beachId: number,
+    @Param('beachId', BeachIdPipe) beachId: number,
   ): Promise<WaterQualityResponseDto> {
     return this.service.getWaterQuality(beachId);
   }
@@ -53,7 +54,7 @@ export class ConditionsController {
     type: OceanRiskResponseDto,
   })
   getOceanRisk(
-    @Param('beachId', ParseIntPipe) beachId: number,
+    @Param('beachId', BeachIdPipe) beachId: number,
   ): Promise<OceanRiskResponseDto> {
     return this.nws.getOceanRisk(beachId);
   }
@@ -69,7 +70,7 @@ export class ConditionsController {
     type: AlertsResponseDto,
   })
   getAlerts(
-    @Param('beachId', ParseIntPipe) beachId: number,
+    @Param('beachId', BeachIdPipe) beachId: number,
   ): Promise<AlertsResponseDto> {
     return this.nws.getAlerts(beachId);
   }

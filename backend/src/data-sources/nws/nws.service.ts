@@ -1,5 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
-import type { BeachAlert, OceanCondition } from '../../types/domain';
+import type { BeachAlert, OceanCondition, WeatherForecast } from '../../types/domain';
+import { mapNwsWeather, NwsWeatherUnavailableError } from './nws-weather.mapper';
 import { mapNwsAlerts, mapNwsCondition } from './nws.mapper';
 import type { NwsAlertCollection, NwsPointResponse, NwsProductIndex, NwsProductReference, NwsSurfForecastProduct } from './nws.types';
 
@@ -12,9 +13,37 @@ const HEADERS = {
 
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
+class NwsHttpError extends Error {
+  constructor(readonly status: number, label: string) { super(`NWS ${label} returned HTTP ${status}`); }
+}
+
 @Injectable()
 export class NwsService {
   constructor(@Optional() private readonly fetcher: Fetcher = fetch) {}
+
+  async getWeather(latitude: number, longitude: number): Promise<WeatherForecast> {
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
+      || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new NwsWeatherUnavailableError('unsupported-location');
+    }
+    let point: NwsPointResponse;
+    try {
+      point = await this.getJson<NwsPointResponse>(`${API_URL}/points/${latitude},${longitude}`, 'weather point metadata');
+    } catch (error) {
+      if (error instanceof NwsHttpError && error.status === 404) throw new NwsWeatherUnavailableError('unsupported-location');
+      throw error;
+    }
+    const properties = point.properties as { forecast?: unknown } | null;
+    if (!properties || typeof properties !== 'object' || Array.isArray(properties)) throw new Error('NWS weather point metadata is malformed');
+    if (properties.forecast == null) throw new NwsWeatherUnavailableError('unsupported-location');
+    // Only follow the exact SJU grid mapping returned for this point; never apply a surf-zone fallback.
+    if (typeof properties.forecast !== 'string'
+      || !/^https:\/\/api\.weather\.gov\/gridpoints\/SJU\/\d+,\d+\/forecast$/.test(properties.forecast)) {
+      throw new Error('NWS weather forecast URL is malformed or unsupported');
+    }
+    const payload = await this.getJson<unknown>(properties.forecast, 'weather forecast');
+    return mapNwsWeather(payload, properties.forecast, new Date().toISOString());
+  }
 
   async getConditions(zoneId: string): Promise<OceanCondition> {
     validateZoneId(zoneId);
@@ -82,12 +111,17 @@ export class NwsService {
     } catch {
       throw new Error(`Unable to retrieve NWS ${label}`);
     }
-    if (!response.ok) throw new Error(`NWS ${label} returned HTTP ${response.status}`);
+    if (!response.ok) throw new NwsHttpError(response.status, label);
+    let payload: unknown;
     try {
-      return await response.json() as T;
+      payload = await response.json();
     } catch {
       throw new Error(`NWS ${label} returned malformed JSON`);
     }
+    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+      throw new Error(`NWS ${label} response is malformed`);
+    }
+    return payload as T;
   }
 }
 

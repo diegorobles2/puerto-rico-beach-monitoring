@@ -2,12 +2,15 @@ import { Logger } from '@nestjs/common';
 import { DRNA_REFRESH_INTERVAL_MS, IngestionScheduler, NWS_REFRESH_INTERVAL_MS } from './ingestion.scheduler';
 import { NwsIngestionService } from './nws-ingestion.service';
 import { IngestionService } from './ingestion.service';
+import { WeatherService } from '../conditions/weather.service';
 
 describe('IngestionScheduler', () => {
   let scheduler: IngestionScheduler;
   let query: jest.Mock;
   let refreshZones: jest.Mock;
   let refreshDrna: jest.Mock;
+  let historyInsert: jest.Mock;
+  let refreshWeather: jest.Mock;
   const originalNwsEnabled = process.env.NWS_SCHEDULER_ENABLED;
   const originalDrnaEnabled = process.env.DRNA_SCHEDULER_ENABLED;
 
@@ -18,11 +21,26 @@ describe('IngestionScheduler', () => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    query = jest.fn().mockResolvedValue([{ nws_forecast_zone: 'PRZ001' }]);
-    const db = jest.fn(() => ({ distinct: () => ({ whereNotNull: query }) }));
+    query = jest.fn().mockResolvedValue([
+      { nws_forecast_zone: 'PRZ001' },
+    ]);
+
+    historyInsert = jest.fn().mockResolvedValue(undefined);
+
+    const db = jest.fn((table: string) => {
+      if (table === 'source_refresh_history') {
+        return { insert: historyInsert };
+      }
+
+      return {
+        distinct: () => ({ whereNotNull: query }),
+      };
+    });
     refreshZones = jest.fn().mockResolvedValue({ attempted: 2, failed: 0 });
     refreshDrna = jest.fn().mockResolvedValue(undefined);
-    scheduler = new IngestionScheduler(db as never, { refreshZones } as unknown as NwsIngestionService, { refresh: refreshDrna } as unknown as IngestionService);
+    refreshWeather = jest.fn().mockResolvedValue({ attempted: 0, failed: 0 });
+    scheduler = new IngestionScheduler(db as never, { refreshZones } as unknown as NwsIngestionService,
+      { refresh: refreshDrna } as unknown as IngestionService, { refreshCached: refreshWeather } as unknown as WeatherService);
   });
 
   afterEach(() => {
@@ -42,6 +60,7 @@ describe('IngestionScheduler', () => {
     expect(refreshZones).toHaveBeenCalledWith(['PRZ001']);
     await jest.advanceTimersByTimeAsync(NWS_REFRESH_INTERVAL_MS);
     expect(refreshZones).toHaveBeenCalledTimes(2);
+    expect(refreshWeather).toHaveBeenCalledTimes(2);
     scheduler.onModuleDestroy();
     await jest.advanceTimersByTimeAsync(NWS_REFRESH_INTERVAL_MS);
     expect(refreshZones).toHaveBeenCalledTimes(2);
@@ -137,5 +156,88 @@ describe('IngestionScheduler', () => {
     scheduler.start();
     await jest.advanceTimersByTimeAsync(DRNA_REFRESH_INTERVAL_MS);
     expect(refreshDrna).toHaveBeenCalledTimes(2);
+  });
+
+  it('records successful DRNA scheduled refreshes', async () => {
+    await scheduler.tickDrna();
+
+    expect(historyInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'drna',
+        source_key: 'scheduled-run',
+        succeeded: true,
+        zone_id: null,
+      }),
+    );
+  });
+
+  it('records failed DRNA scheduled refreshes', async () => {
+    refreshDrna.mockRejectedValueOnce(new Error('DRNA unavailable'));
+
+    await scheduler.tickDrna();
+
+    expect(historyInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'drna',
+        succeeded: false,
+      }),
+    );
+  });
+
+  it('records partial NWS refresh failures', async () => {
+    refreshZones.mockResolvedValueOnce({
+      attempted: 4,
+      failed: 1,
+    });
+
+    await scheduler.tick();
+
+    expect(historyInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'nws',
+        source_key: 'scheduled-run',
+        succeeded: false,
+      }),
+    );
+  });
+
+  it('does not record success when there are no mapped NWS zones', async () => {
+    query.mockResolvedValueOnce([]);
+    refreshZones.mockResolvedValueOnce({ attempted: 0, failed: 0, publishedAt: null });
+    await scheduler.tick();
+    expect(historyInsert).toHaveBeenCalledWith(expect.objectContaining({
+      source: 'nws', succeeded: false, published_at: null,
+    }));
+    expect(Logger.prototype.warn).toHaveBeenCalledWith('NWS refresh skipped: no mapped zones');
+  });
+
+  it('persists forecast publication metadata only for successful NWS runs', async () => {
+    const publishedAt = '2026-11-05T09:00:00.000Z';
+    refreshZones.mockResolvedValueOnce({ attempted: 2, failed: 0, publishedAt });
+    await scheduler.tick();
+    expect(historyInsert).toHaveBeenLastCalledWith(expect.objectContaining({ published_at: publishedAt, succeeded: true }));
+    refreshZones.mockResolvedValueOnce({ attempted: 2, failed: 1, publishedAt });
+    await scheduler.tick();
+    expect(historyInsert).toHaveBeenLastCalledWith(expect.objectContaining({ published_at: null, succeeded: false }));
+  });
+
+  it('continues scheduling when history persistence fails', async () => {
+    historyInsert.mockRejectedValueOnce(new Error('Database unavailable'));
+
+    await expect(scheduler.tickDrna()).resolves.toBeUndefined();
+
+    await scheduler.tickDrna();
+
+    expect(refreshDrna).toHaveBeenCalledTimes(2);
+    expect(historyInsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('isolates weather refresh failures from surf/alert refresh results', async () => {
+    refreshWeather.mockRejectedValueOnce(new Error('weather offline'));
+    await expect(scheduler.tick()).resolves.toBeUndefined();
+    expect(Logger.prototype.warn).toHaveBeenCalledWith('Cached weather refresh failed');
+    expect(historyInsert).toHaveBeenLastCalledWith(expect.objectContaining({ source: 'nws', succeeded: true }));
+    await scheduler.tick();
+    expect(refreshWeather).toHaveBeenCalledTimes(2);
   });
 });

@@ -37,3 +37,16 @@ export interface BeachAlert {
   source: SourceMetadata;
 }
 export interface CommunityReport { id: string; beachId: string; summary: string; createdAt: string; }
+export interface WeatherForecast {
+  name: string;
+  validFrom: string;
+  validTo: string;
+  temperature: number;
+  temperatureUnit: 'C' | 'F';
+  windSpeed: string;
+  windDirection: string;
+  precipitationProbabilityPercent: number | null;
+  shortForecast: string;
+  detailedForecast: string;
+  source: SourceMetadata;
+}

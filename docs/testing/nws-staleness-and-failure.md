@@ -22,19 +22,13 @@ cd backend
 npx jest --runInBand src/data-sources/nws src/ingestion/nws-ingestion.service.spec.ts src/conditions/nws-conditions.service.spec.ts src/conditions/nws-conditions.http.spec.ts
 ```
 
-Run the documented backend regression gate:
-
-```bash
-cd backend
-npx jest --runInBand
-npm run build
-```
+For the full backend regression gate, use [the isolated PostgreSQL integration guide](postgres-integration.md), including database setup and environment variables, before running the full suite and build. Do not run unrestricted backend tests using the application's Supabase `.env`: the DRNA ingestion suite also runs when `DATABASE_URL` is present and does not enforce the NWS local-database guards. The focused command above runs mocked suites only.
 
 Coverage includes current and stale risk, missing timestamps, the exact freshness boundary, current and stale empty alert checks, stale last-known values through HTTP, failed-refresh behavior, expired-alert filtering, timeout, HTTP errors, malformed JSON/payloads, and source URL/timestamp preservation. The HTTP tests exercise Nest controllers with Supertest. The adapter tests use local fixtures and mocked fetchers.
 
 ## Database-boundary verification
 
-The persistence integration suite is deliberately restricted to a local database named `beach_monitoring_test`; it is skipped otherwise. Create that local database, then apply migrations and run the suite with the same connection string:
+The persistence integration suite is deliberately restricted to a local database named `beach_monitoring_test`; a basic local test run skips it unless the guarded URL is configured. Backend CI provisions PostgreSQL 16, sets the test URL, applies migrations, and runs this suite. To run it locally, create an isolated test database, then apply migrations and run the suite with the same connection string:
 
 ```bash
 cd backend
@@ -52,4 +46,4 @@ $env:NWS_PERSISTENCE_TEST_DATABASE_URL=$env:DATABASE_URL
 npx jest --runInBand src/ingestion/nws-persistence.service.spec.ts
 ```
 
-Do not point this variable at production or a shared Supabase project. The persistence regression verifies that stored source URLs and observed/retrieved timestamps survive the database boundary, and that older snapshots cannot replace newer ones.
+Do not point this variable at production or a shared Supabase project. The persistence regression verifies that stored source URLs and observed/retrieved timestamps survive the database boundary, and that older snapshots cannot replace newer ones. The full local reproduction, including the separate migration-test database, is documented in [the PostgreSQL integration guide](postgres-integration.md).

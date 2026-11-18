@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BeachDetails } from '../components/beach/BeachDetails';
+import { BeachSearch } from '../components/beach/BeachSearch';
+import { useGeolocation } from '../hooks/useGeolocation';
+import { filterBeaches, listMunicipalities } from '../utils/beachFilters';
+import { formatDistance } from '../utils/distance';
 import { BeachMap } from '../components/map/BeachMap';
 import { OceanRiskCard } from '../components/status/OceanRiskCard';
 import { AlertsCard } from '../components/status/AlertsCard';
 import { WaterQualityCard } from '../components/status/WaterQualityCard';
-import { getAlerts, getOceanRisk, getBeachConditions, getBeaches } from '../services/beachApi';
-import type { AlertsResponse, OceanRiskResponse, Beach, WaterQualityCondition } from '../types';
+import { WeatherCard } from '../components/status/WeatherCard';
+import { getAlerts, getOceanRisk, getBeachConditions, getBeaches, getWeather } from '../services/beachApi';
+import type { AlertsResponse, OceanRiskResponse, Beach, WaterQualityCondition, WeatherResponse } from '../types';
 
 interface Resource<T> { data?: T; loading: boolean; error?: string }
 
@@ -18,7 +23,26 @@ export function BeachPage() {
   const [error, setError] = useState<string | null>(null);
   const [risks, setRisks] = useState<Record<string, Resource<OceanRiskResponse>>>({});
   const [alerts, setAlerts] = useState<Record<string, Resource<AlertsResponse>>>({});
+  const [weather, setWeather] = useState<Record<string, Resource<WeatherResponse>>>({});
   const [refresh, setRefresh] = useState(0);
+  const [query, setQuery] = useState('');
+  const [municipality, setMunicipality] = useState('');
+  const geolocation = useGeolocation();
+
+  const municipalities = useMemo(() => listMunicipalities(beaches), [beaches]);
+  const results = useMemo(
+    () => filterBeaches(beaches, { query, municipality, location: geolocation.location }),
+    [beaches, query, municipality, geolocation.location],
+  );
+  const selectedDistanceKm = results.find((result) => String(result.beach.id) === String(selectedBeachId))?.distanceKm ?? null;
+
+  // Keep the current selection while it still matches; otherwise move to the
+  // first match. With no matches, leave the last selection in place.
+  useEffect(() => {
+    if (results.length === 0) return;
+    if (results.some((result) => String(result.beach.id) === String(selectedBeachId))) return;
+    setSelectedBeachId(results[0].beach.id);
+  }, [results, selectedBeachId]);
 
   useEffect(() => {
     if (selectedBeachId == null) return;
@@ -26,6 +50,17 @@ export function BeachPage() {
     const controller = new AbortController();
     setRisks(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
     setAlerts(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
+    setWeather(previous => ({ ...previous, [id]: { data: previous[id]?.data, loading: true } }));
+    void getWeather(id, controller.signal).then(data => {
+      if (!controller.signal.aborted) setWeather(previous => {
+        const last = previous[id]?.data;
+        const next: WeatherResponse = !data.forecast && last?.forecast
+          ? { ...last, availability: 'stale', unavailableReason: data.unavailableReason } : data;
+        return { ...previous, [id]: { data: next, loading: false } };
+      });
+    }).catch(() => {
+      if (!controller.signal.aborted) setWeather(previous => ({ ...previous, [id]: { ...previous[id], loading: false, error: 'Unable to load weather forecast' } }));
+    });
     void getOceanRisk(id, controller.signal).then(data => {
       if (!controller.signal.aborted) setRisks(previous => ({ ...previous, [id]: { data, loading: false } }));
     }).catch(() => {
@@ -99,6 +134,27 @@ export function BeachPage() {
       </header>
 
       {beaches.length > 0 ? (
+        <BeachSearch
+          query={query}
+          onQueryChange={setQuery}
+          municipality={municipality}
+          municipalities={municipalities}
+          onMunicipalityChange={setMunicipality}
+          resultCount={results.length}
+          totalCount={beaches.length}
+          locationStatus={geolocation.status}
+          onRequestLocation={geolocation.request}
+          onClearLocation={geolocation.clear}
+        />
+      ) : null}
+
+      {beaches.length > 0 && results.length === 0 ? (
+        <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          No beaches match your search. Clear the filters to see all {beaches.length} beaches.
+        </p>
+      ) : null}
+
+      {results.length > 0 ? (
         <label className="block text-sm font-medium text-slate-700">
           Select beach
           <select
@@ -106,23 +162,31 @@ export function BeachPage() {
             onChange={(event) => setSelectedBeachId(event.target.value)}
             className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
           >
-            {beaches.map((item) => (
+            {results.map(({ beach: item, distanceKm }) => (
               <option key={String(item.id)} value={String(item.id)}>
                 {item.name}
+                {item.municipality ? ` (${item.municipality})` : ''}
+                {distanceKm != null ? ` · ${formatDistance(distanceKm)}` : ''}
               </option>
             ))}
           </select>
         </label>
       ) : null}
 
-      <BeachMap beaches={beaches} selectedBeachId={selectedBeachId} onSelect={setSelectedBeachId} />
+      <BeachMap
+        beaches={results.map((result) => result.beach)}
+        selectedBeachId={selectedBeachId}
+        onSelect={setSelectedBeachId}
+        userLocation={geolocation.location}
+      />
 
-      {beach ? <BeachDetails beach={beach} /> : null}
+      {beach ? <BeachDetails beach={beach} distanceKm={selectedDistanceKm} /> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <WaterQualityCard condition={condition} loading={loading} error={error} />
         <OceanRiskCard condition={risks[String(selectedBeachId)]?.data} loading={risks[String(selectedBeachId)]?.loading} error={risks[String(selectedBeachId)]?.error} />
         <AlertsCard response={alerts[String(selectedBeachId)]?.data} loading={alerts[String(selectedBeachId)]?.loading} error={alerts[String(selectedBeachId)]?.error} />
+        <WeatherCard condition={weather[String(selectedBeachId)]?.data} loading={weather[String(selectedBeachId)]?.loading} error={weather[String(selectedBeachId)]?.error} />
       </div>
       {selectedBeachId != null && <button type="button" className="rounded border border-slate-400 px-4 py-2" onClick={() => setRefresh(value => value + 1)}>Refresh NWS data</button>}
     </main>

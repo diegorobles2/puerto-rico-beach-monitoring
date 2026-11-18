@@ -23,7 +23,7 @@ export const ALERTS_STALE_AFTER_MS = HOUR_MS;
 export class NwsConditionsService {
   constructor(
     @Inject(DATABASE) private readonly db: Knex,
-    @Optional() @Inject(NWS_CONDITIONS_CLOCK) private readonly now: () => Date = () => new Date(),
+    @Optional() @Inject(NWS_CONDITIONS_CLOCK) private readonly now: () => Date = () => new Date(Date.now()),
   ) {}
 
   async getOceanRisk(beachId: number): Promise<OceanRiskResponseDto> {
