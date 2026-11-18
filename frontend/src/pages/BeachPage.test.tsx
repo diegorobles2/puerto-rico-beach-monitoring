@@ -6,6 +6,7 @@ import { BeachPage } from './BeachPage';
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TileLayer: () => <div />,
+  Marker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CircleMarker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Popup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));

@@ -160,7 +160,7 @@ export function BeachPage() {
           <select
             value={String(selectedBeachId)}
             onChange={(event) => setSelectedBeachId(event.target.value)}
-            className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className="mt-2 block min-h-11 w-full rounded-md border border-slate-500 bg-white px-3 py-2 text-base text-slate-900 sm:text-sm"
           >
             {results.map(({ beach: item, distanceKm }) => (
               <option key={String(item.id)} value={String(item.id)}>
@@ -182,13 +182,13 @@ export function BeachPage() {
 
       {beach ? <BeachDetails beach={beach} distanceKm={selectedDistanceKm} /> : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div id="beach-conditions" tabIndex={-1} aria-label="Beach conditions" role="region" className="grid gap-4 md:grid-cols-2">
         <WaterQualityCard condition={condition} loading={loading} error={error} />
         <OceanRiskCard condition={risks[String(selectedBeachId)]?.data} loading={risks[String(selectedBeachId)]?.loading} error={risks[String(selectedBeachId)]?.error} />
         <AlertsCard response={alerts[String(selectedBeachId)]?.data} loading={alerts[String(selectedBeachId)]?.loading} error={alerts[String(selectedBeachId)]?.error} />
         <WeatherCard condition={weather[String(selectedBeachId)]?.data} loading={weather[String(selectedBeachId)]?.loading} error={weather[String(selectedBeachId)]?.error} />
       </div>
-      {selectedBeachId != null && <button type="button" className="rounded border border-slate-400 px-4 py-2" onClick={() => setRefresh(value => value + 1)}>Refresh NWS data</button>}
+      {selectedBeachId != null && <button type="button" className="min-h-11 rounded border border-slate-500 px-4 py-2" onClick={() => setRefresh(value => value + 1)}>Refresh NWS data</button>}
     </main>
   );
 }

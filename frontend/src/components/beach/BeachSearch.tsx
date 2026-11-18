@@ -47,7 +47,7 @@ export function BeachSearch({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Beach or municipality"
-            className="mt-2 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="mt-2 block min-h-11 w-full rounded-md border border-slate-500 px-3 py-2 text-base text-slate-900 sm:text-sm"
           />
         </label>
         <label className="block text-sm font-medium text-slate-700">
@@ -55,7 +55,7 @@ export function BeachSearch({
           <select
             value={municipality}
             onChange={(event) => onMunicipalityChange(event.target.value)}
-            className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className="mt-2 block min-h-11 w-full rounded-md border border-slate-500 bg-white px-3 py-2 text-base text-slate-900 sm:text-sm"
           >
             <option value="">All municipalities</option>
             {municipalities.map((name) => (
@@ -70,7 +70,7 @@ export function BeachSearch({
       <div className="flex flex-wrap items-center gap-3 text-sm">
         {onRequestLocation ? (
           locationStatus === 'success' && onClearLocation ? (
-            <button type="button" onClick={onClearLocation} className="rounded border border-slate-400 px-3 py-1.5">
+            <button type="button" onClick={onClearLocation} className="min-h-11 rounded border border-slate-500 px-3 py-2">
               Stop using my location
             </button>
           ) : (
@@ -78,7 +78,7 @@ export function BeachSearch({
               type="button"
               onClick={onRequestLocation}
               disabled={locationStatus === 'locating'}
-              className="rounded border border-slate-400 px-3 py-1.5 disabled:opacity-60"
+              className="min-h-11 rounded border border-slate-500 px-3 py-2 disabled:cursor-wait disabled:text-slate-600"
             >
               Sort by nearest to me
             </button>
@@ -91,18 +91,18 @@ export function BeachSearch({
               onQueryChange('');
               onMunicipalityChange('');
             }}
-            className="rounded border border-slate-300 px-3 py-1.5"
+            className="min-h-11 rounded border border-slate-500 px-3 py-2"
           >
             Clear filters
           </button>
         ) : null}
-        <p aria-live="polite" className="text-slate-600">
+        <p aria-live="polite" className="text-slate-700">
           {filtered ? `${resultCount} of ${totalCount} beaches` : `${totalCount} beaches`}
         </p>
       </div>
 
       {locationMessage ? (
-        <p role="status" className="text-sm text-slate-600">
+        <p role="status" className="text-sm text-slate-700">
           {locationMessage}
         </p>
       ) : null}
