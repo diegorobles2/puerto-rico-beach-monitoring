@@ -1,10 +1,23 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { verifySourceApiFidelity } from './verify-source-api-fidelity';
+import * as ingestion from '../ingestion/ingestion.service';
 
 const manifestPath = resolve(__dirname, 'fixtures/source-api-fidelity.v1.json');
 
 describe('source-to-API fidelity verification', () => {
+  it('detects an incorrect production date converter using independent expected dates', async () => {
+    const converter = jest.spyOn(ingestion, 'formatDrnaSampleDate').mockReturnValue('2026-01-01');
+    try {
+      const report = await verifySourceApiFidelity({ manifestPath });
+      const dates = report.comparisons.filter(row => row.provider === 'DRNA' && row.field === 'api.observedAt');
+      expect(dates).toHaveLength(10);
+      expect(dates.every(row => !row.matched && row.actual === '2026-01-01')).toBe(true);
+      expect(dates[0].expected).toBe('2023-01-09');
+      expect(report.passed).toBe(false);
+    } finally { converter.mockRestore(); }
+  });
+
   it('compares more than 100 source, normalized, and API fields across DRNA and NWS', async () => {
     const report = await verifySourceApiFidelity({ manifestPath });
     const fields = report.comparisons.map((comparison) => comparison.field);
@@ -83,7 +96,7 @@ describe('source-to-API fidelity verification', () => {
     const backendRoot = resolve(__dirname, '../..');
     let directory: string;
     let path: string;
-    let manifest: { cases: Array<{ provider: string; sourceEvidence: { fixture: string } }>; [key: string]: unknown };
+    let manifest: { cases: Array<{ provider: string; sourceEvidence: { fixture: string }; expectedApi?: { observedAt: string } }>; [key: string]: unknown };
     beforeEach(() => {
       directory = mkdtempSync(resolve(backendRoot, '.fidelity-test-'));
       path = resolve(directory, 'manifest.json');
@@ -121,6 +134,12 @@ describe('source-to-API fidelity verification', () => {
       manifest.drnaReplayAsOf = 'invalid';
       writeFileSync(path, JSON.stringify(manifest));
       await expect(verifySourceApiFidelity({ manifestPath: path })).rejects.toThrow('Invalid replay timestamp');
+    });
+
+    it('rejects missing independent API dates instead of deriving them from production code', async () => {
+      delete manifest.cases[0].expectedApi;
+      writeFileSync(path, JSON.stringify(manifest));
+      await expect(verifySourceApiFidelity({ manifestPath: path })).rejects.toThrow('independent expected API sample date');
     });
   });
 });

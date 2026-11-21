@@ -16,6 +16,8 @@ The current manifest produces 321 field comparisons across 12 source cases. This
 
 Fixture containment uses platform-native relative paths and rejects absolute/escaping paths on Windows and Linux. Tests also change a raw NWS source fixture while leaving expected values unchanged, and require the real normalizer and HTTP API to report mismatches. The 98% threshold uses unrounded counts; rounding is for display only. This is deterministic fixture verification, not live-source accuracy or PostgreSQL persistence evidence.
 
+DRNA expected API sample dates are explicit ISO literals in each case's `expectedApi.observedAt`, independently transcribed from the captured source dates. Only actual persistence rows use the production date converter. A regression test forces that converter to return the same incorrect date for every sample and requires ten date mismatches and a failing report. Missing or invalid expected dates are configuration errors.
+
 The CLI exits `0` when agreement meets the configured 98% minimum, `1` when it falls below the minimum, and `2` for invalid configuration or execution errors. A deliberate failure can be checked without modifying fixtures:
 
 ```bash
@@ -36,5 +38,6 @@ returned 321/321 matches (exit 0), and its documented corrupt-case control retur
 12 mismatches / 96.2617% agreement (exit 1). A separate test changes raw source
 content and detects both normalized and API mismatches. These are fixture replay
 results, not live-source or database integration measurements. The repository's
-dependency-audit gate remains enabled; the separately tracked upstream
-`GHSA-fc5q-39xc-vjpf` picomatch advisory still blocks that gate.
+dependency-audit gate remains enabled. This branch now includes the reviewed
+dev-only exception for `GHSA-fc5q-39xc-vjpf` from PR #73; the historical audit
+failures above predate that integration. Fresh CI must verify the updated branch.

@@ -20,7 +20,7 @@ interface FieldMapping {
   apiField: string;
   normalizedField?: string;
   literal?: unknown;
-  transform?: 'drna-sample-date';
+  expectedApiField?: string;
 }
 
 interface FidelityCase {
@@ -36,6 +36,7 @@ interface FidelityCase {
   };
   api: { beachId: number; path: string };
   expectedNormalized: JsonObject;
+  expectedApi?: JsonObject;
 }
 
 interface FidelityManifest {
@@ -158,12 +159,11 @@ export async function verifySourceApiFidelity(options: FidelityRunOptions = {}):
       }
 
       for (const mapping of manifest.fieldMappings[item.definition.provider]) {
-        let expected = Object.prototype.hasOwnProperty.call(mapping, 'literal')
+        const expected = Object.prototype.hasOwnProperty.call(mapping, 'literal')
           ? mapping.literal
-          : getPath(expectedNormalized, mapping.normalizedField!);
-        if (mapping.transform === 'drna-sample-date') {
-          expected = formatDrnaSampleDate(String(expected));
-        }
+          : mapping.expectedApiField
+            ? getPath(item.definition.expectedApi, mapping.expectedApiField)
+            : getPath(expectedNormalized, mapping.normalizedField!);
 
         let actual = getPath(apiBody, mapping.apiField);
         const shouldCorruptCase = options.corruptCaseIds?.includes(item.definition.id) ?? false;
@@ -398,6 +398,13 @@ function validateManifest(manifest: FidelityManifest): void {
     if (!testCase.id || ids.has(testCase.id)) throw new Error(`Missing or duplicate fidelity case ID: ${testCase.id}`);
     ids.add(testCase.id);
     if (!testCase.sourceEvidence.fixture || !testCase.sourceEvidence.sourceUrl) throw new Error(`Fidelity case ${testCase.id} is missing source provenance`);
+    if (testCase.provider === 'DRNA') {
+      const date = testCase.expectedApi?.observedAt;
+      if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)
+        || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+        throw new Error(`Fidelity case ${testCase.id} needs an independent expected API sample date`);
+      }
+    }
   }
   for (const provider of ['DRNA', 'NWS_RISK', 'NWS_ALERTS'] as const) {
     if (!Array.isArray(manifest.fieldMappings[provider]) || manifest.fieldMappings[provider].length === 0) {
