@@ -52,3 +52,20 @@ The November 17 entry below reports a manual pass, but does not identify the scr
 |   Date   |     Reviewer    |  Browser / device  |     Result / notes     |
 |   ---    |       ---       |         ---        |           ---          |
 | 11/17/26 | Christian Perez | Fire Fox Developer; version, device/OS, screen reader, and phone details not recorded | Original result: "All manual checks pass." Per-check evidence pending; not a verified pass for the checklist above. |
+
+## Browser-assisted review: November 21, 2026
+
+Inspected genuine local screenshots from branch `issue-43-accessibility`, using the existing synthetic fixtures (Beach 02). Capture: **2026-11-21 21:27:19 UTC / 17:27:19 America/La_Paz**. Environment: Windows, headless Chromium **159.0.8154.6**, Playwright, local production build and preview. No production data was changed. Map tiles are blank fixture images, not evidence of live map imagery.
+
+One temporary Playwright evidence-capture test passed (**1/1**, 35.2 seconds including server startup). It used `e2e/fixtures.ts`, selected Beach 02, measured page overflow, captured the screenshots below, and recorded browser/media observations. The temporary test was removed after capture; it is not part of the committed regression suite. This was browser automation followed by image inspection, not human screen-reader or device testing.
+
+| Check | Observed result | Evidence / limit |
+| --- | --- | --- |
+| Narrow-screen reflow | Pass for the captured state. At 640px and 320px, page scroll width equaled viewport width. Image review found readable cards and controls with no apparent text clipping. | [640px](accessibility-evidence/reflow-640.png), [320px](accessibility-evidence/reflow-320.png). Resizing is not an actual 200%/400% browser-zoom test; the manual zoom item remains pending. |
+| Status meaning without color | Pass for the captured available-data state: water quality says "Suitable" with explanatory text, ocean risk says "high", alerts say "Active alerts", and weather describes the forecast in text. | [Status cards](accessibility-evidence/text-statuses.png). Other states were reviewed in source (`WaterQualityCard`, `OceanRiskCard`, `AlertsCard`, `WeatherCard`), but were not visually captured in this session; the full manual checklist item remains pending. |
+| Forced colors | Inconclusive. The media query reported active, but the captured palette and marker computed colors remained the normal colors. The search focus ring was visible. | [Capture](accessibility-evidence/forced-colors.png). This does not verify Windows High Contrast rendering. |
+| Reduced motion | The preference query reported `reduce`; zero running animations were observed at the static capture. | [Raw observations](accessibility-evidence/browser-observations.json). Map transitions during interaction were not assessed; the full manual item remains pending. |
+| Screen-reader announcements | Not performed. No interactive screen-reader tool was available. | Requires NVDA + Firefox or VoiceOver + Safari; DOM roles do not prove audible announcements. |
+| Real phones and on-screen keyboard | Not performed. No physical iOS/Android device was available. | Headless desktop viewport changes do not establish real-phone usability. |
+
+To finish the pending human checks, record the tester and exact browser/OS/device or screen-reader version next to each result. Use a 1280px desktop window at actual 200% and 400% browser zoom; enable Windows High Contrast for the focus/marker checks; use the screen reader to search, select, and hear loading/error/stale messages; and test search, map pan/page scrolling, and the on-screen keyboard on both physical phone platforms.
