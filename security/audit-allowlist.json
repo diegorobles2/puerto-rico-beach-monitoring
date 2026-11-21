@@ -1,0 +1,8 @@
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "reason": "ReDoS from crafted glob patterns. Reached only through development tools (Vite, Vitest, Tailwind, ESLint, Jest, Nest CLI) that match patterns written in our own config files. `npm audit --omit=dev` reports zero findings in both apps. No patched picomatch release exists yet (<=4.0.7 affected).",
+    "revisitBy": "2026-12-15"
+  }
+]

@@ -22,10 +22,50 @@ matching Chromium browser. These browser tests use synthetic data, not live
 DRNA/NWS responses.
 
 Both application workflows now run lint and dependency auditing before their
-existing build/test checks. `npm audit --audit-level=high` checks **all** installed
-dependencies, including development tools; high/critical findings fail the job,
-as do registry/connectivity errors. Moderate findings remain visible. This is a
-point-in-time advisory check, not a guarantee that every vulnerability is known.
+existing build/test checks. `npm run audit:security` runs
+[`scripts/audit-gate.mjs`](../../scripts/audit-gate.mjs), which runs `npm audit --json`
+over **all** installed dependencies, including development tools. Any high or
+critical advisory fails the job, as do registry/connectivity errors, unless that
+exact advisory is listed in [`security/audit-allowlist.json`](../../security/audit-allowlist.json)
+for the package it names. Moderate findings are counted in the output but do not
+block. This is a point-in-time advisory check, not a guarantee that every
+vulnerability is known.
+
+### High/critical allowlist
+
+Use the allowlist only for an advisory that has no compatible fix and does not
+reach production code. Each entry needs a GHSA `id`, the vulnerable `package`, a
+`reason` explaining the exposure, and a `revisitBy` date (`YYYY-MM-DD`):
+
+- After `revisitBy`, the gate fails until someone re-checks the advisory and either
+  removes the entry or sets a new date with an updated reason.
+- An entry covers only its advisory on its named package; a new high advisory on
+  any package still fails.
+- Before allowing an entry, the gate checks every affected dependency path,
+  including transitive dependents, against the current application's lockfile.
+  Every path must explicitly have `dev: true`. Production/shared dependencies,
+  linked dependencies, missing paths, and unsupported/missing lockfiles block
+  the exception. A package moving into production cannot silently keep its waiver.
+- The npm command explicitly includes development dependencies even if local
+  npm configuration normally omits them. Only subprocess exit codes 0 and 1 are
+  valid; errors, signals, other exits, malformed JSON, unsupported report
+  versions, inconsistent counts, and unresolved advisory references fail closed.
+  Dependency cycles are resolved without dropping their underlying advisories.
+- The output prints every allowed advisory with its reason, and a notice when an
+  entry no longer matches anything so it can be removed.
+- `node --test scripts/audit-gate.test.mjs` covers these rules and runs in
+  Frontend CI. Production-only exposure can be confirmed with
+  `npm audit --omit=dev --audit-level=high`.
+
+The gate has 18 offline regression tests, including CLI-level subprocess failure
+and production-exposure cases. Tests also inspect both committed lockfiles to
+confirm their picomatch copies remain development-only. The exposure checks do
+not establish safety for arbitrary untrusted glob patterns; the temporary
+exception still relies on the documented trusted build/test configuration.
+
+| Advisory | Exposure and rationale | Revisit when |
+| --- | --- | --- |
+| [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), picomatch ReDoS through repeated extglobs (high) | Widened on November 17, 2026 to every release through 4.0.7, the latest; no patched version exists. Reached only through development tools: Vite, Vitest, Tailwind and typescript-eslint in the frontend; Jest, Nest CLI and ts-loader in the backend. They match glob patterns written in our own configuration, never user input. `npm audit --omit=dev` reports zero findings in both apps on November 18, 2026, and the frontend bundle and backend runtime image omit dev dependencies. | A patched picomatch is released (run `npm audit fix` in both apps and remove the entry), untrusted patterns are introduced, or the December 15, 2026 revisit date arrives. |
 
 ## Dependency remediation and remaining findings
 
