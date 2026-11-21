@@ -37,7 +37,7 @@ export function WaterQualityCard({
     return (
       <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h2 className="text-lg font-semibold text-slate-900">Water quality</h2>
-        <p className="mt-3 text-sm font-medium text-sky-700">Loading water-quality status…</p>
+        <p role="status" className="mt-3 text-sm font-medium text-sky-800">Loading water-quality status…</p>
         <p className="mt-1 text-sm text-slate-600">Checking the latest normalized source data.</p>
       </article>
     );
@@ -47,7 +47,7 @@ export function WaterQualityCard({
     return (
       <article className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm sm:p-5">
         <h2 className="text-lg font-semibold text-slate-900">Water quality</h2>
-        <p className="mt-3 text-sm font-semibold text-red-700">Water quality unavailable</p>
+        <p role="status" className="mt-3 text-sm font-semibold text-red-700">Water quality unavailable</p>
         <p className="mt-1 text-sm text-red-700">{error}</p>
       </article>
     );
@@ -57,7 +57,7 @@ export function WaterQualityCard({
     return (
       <article className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5">
         <h2 className="text-lg font-semibold text-slate-900">Water quality</h2>
-        <p className="mt-3 text-sm font-semibold text-amber-800">Water quality unavailable</p>
+        <p role="status" className="mt-3 text-sm font-semibold text-amber-800">Water quality unavailable</p>
         <p className="mt-1 text-sm text-amber-800">No recent water-quality data available.</p>
       </article>
     );
@@ -111,7 +111,7 @@ export function WaterQualityCard({
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-lg bg-sky-50 p-3">
-          <dt className="text-xs font-semibold uppercase text-slate-500">Enterococcus</dt>
+          <dt className="text-xs font-semibold uppercase text-slate-600">Enterococcus</dt>
           <dd className="mt-1 font-semibold text-slate-900">
             {condition.enterococcusValue == null
               ? 'Not reported'
@@ -119,24 +119,24 @@ export function WaterQualityCard({
           </dd>
         </div>
         <div className="rounded-lg bg-slate-50 p-3">
-          <dt className="text-xs font-semibold uppercase text-slate-500">Sample type</dt>
+          <dt className="text-xs font-semibold uppercase text-slate-600">Sample type</dt>
           <dd className="mt-1 capitalize text-slate-900">{condition.samplingType ?? 'Not reported'}</dd>
         </div>
         <div className="rounded-lg bg-slate-50 p-3">
-          <dt className="text-xs font-semibold uppercase text-slate-500">Water temperature</dt>
+          <dt className="text-xs font-semibold uppercase text-slate-600">Water temperature</dt>
           <dd className="mt-1 text-slate-900">{condition.temperatureCelsius == null ? 'Not reported' : `${condition.temperatureCelsius}°C`}</dd>
         </div>
         <div className="rounded-lg bg-slate-50 p-3">
-          <dt className="text-xs font-semibold uppercase text-slate-500">pH</dt>
+          <dt className="text-xs font-semibold uppercase text-slate-600">pH</dt>
           <dd className="mt-1 text-slate-900">{condition.ph ?? 'Not reported'}</dd>
         </div>
       </dl>
 
       <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Source</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Source</p>
         <p className="mt-1 text-sm text-slate-700">{sourceName}</p>
         {condition.sourceUrl ? (
-          <a href={condition.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-sky-700 underline">
+          <a href={condition.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex min-h-6 items-center text-sm text-sky-800 underline">
             Read report
           </a>
         ) : null}
