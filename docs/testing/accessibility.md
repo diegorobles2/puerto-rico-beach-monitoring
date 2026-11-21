@@ -37,16 +37,18 @@ Run only this suite: `npx playwright test e2e/accessibility.e2e.ts` from `fronte
 
 ## Manual checks (to be completed by a reviewer)
 
-Record the date, browser, device, and result for each item. Leave an item unchecked until someone has actually performed it.
+Record the date, browser and version, device/OS, assistive technology (when applicable), and result for each item. Leave an item unchecked until it has been performed and its evidence recorded.
 
-- [X] Screen reader (NVDA + Firefox or VoiceOver + Safari): search, filter, select a beach from the list and from a marker, then hear each card's status, stale warnings, and source links.
-- [X] Screen reader announces loading, error, and "No beaches match your search" status messages without moving focus.
-- [X] 200% browser zoom and 400% zoom at 1280px width: no loss of content or functionality, no two-direction scrolling for text.
-- [X] Windows High Contrast / forced-colors mode: focus ring, markers, and status badges remain visible.
-- [X] Real phone (iOS Safari and Android Chrome): controls are easy to tap, the map pans without trapping page scroll, and the on-screen keyboard does not hide the search box.
-- [X] Status meaning never depends on color alone (water quality, ocean risk, alerts, weather).
-- [X] Reduced motion: no essential information relies on animation.
+The November 17 entry below reports a manual pass, but does not identify the screen reader, phone devices, or results for individual checks. These checks remain pending evidence verification; this does not establish that they failed or were never performed. Automated Chromium checks do not verify screen-reader behavior or real-phone usability.
+
+- [ ] Screen reader (NVDA + Firefox or VoiceOver + Safari): search, filter, select a beach from the list and from a marker, then hear each card's status, stale warnings, and source links.
+- [ ] Screen reader announces loading, error, and "No beaches match your search" status messages without moving focus.
+- [ ] 200% browser zoom and 400% zoom at 1280px width: no loss of content or functionality, no two-direction scrolling for text.
+- [ ] Windows High Contrast / forced-colors mode: focus ring, markers, and status badges remain visible.
+- [ ] Real phone (iOS Safari and Android Chrome): controls are easy to tap, the map pans without trapping page scroll, and the on-screen keyboard does not hide the search box.
+- [ ] Status meaning never depends on color alone (water quality, ocean risk, alerts, weather).
+- [ ] Reduced motion: no essential information relies on animation.
 
 |   Date   |     Reviewer    |  Browser / device  |     Result / notes     |
 |   ---    |       ---       |         ---        |           ---          |
-| 11/17/26 | Christian Perez | Fire Fox Developer | All manual checks pass |
+| 11/17/26 | Christian Perez | Fire Fox Developer; version, device/OS, screen reader, and phone details not recorded | Original result: "All manual checks pass." Per-check evidence pending; not a verified pass for the checklist above. |
