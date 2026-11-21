@@ -1,14 +1,18 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { DATABASE } from '../database/database.module';
 import { WaterQualityResponseDto } from './dto/water-quality-response.dto';
 
 // Application policy retained from the UI warning, not a DRNA sampling/publication guarantee.
 export const WATER_QUALITY_SAMPLE_STALE_AFTER_MS = 48 * 60 * 60 * 1000;
+export const WATER_QUALITY_CLOCK = Symbol('WATER_QUALITY_CLOCK');
 
 @Injectable()
 export class ConditionsService {
-  constructor(@Inject(DATABASE) private readonly db: Knex) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Knex,
+    @Optional() @Inject(WATER_QUALITY_CLOCK) private readonly now: () => number = () => Date.now(),
+  ) {}
 
   async getWaterQuality(beachId: number): Promise<WaterQualityResponseDto> {
     const beach = await this.db('beaches')
@@ -49,7 +53,7 @@ export class ConditionsService {
 
     const observedAt = toIsoDate(observation.sampled_at);
     const sampleTime = observedAt === null ? NaN : Date.parse(observedAt);
-    const now = Date.now();
+    const now = this.now();
     const stale = !Number.isFinite(sampleTime) || sampleTime > now
       || now - sampleTime > WATER_QUALITY_SAMPLE_STALE_AFTER_MS;
 
