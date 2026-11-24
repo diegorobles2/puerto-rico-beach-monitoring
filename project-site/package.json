@@ -1,0 +1,20 @@
+{
+  "name": "puerto-rico-beach-monitoring-project-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run validate:evidence && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "validate:evidence": "node scripts/validate-evidence.mjs",
+    "test:evidence": "node --test scripts/validate-evidence.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3",
+    "vite": "^6.4.6"
+  }
+}
