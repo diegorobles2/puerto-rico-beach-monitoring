@@ -1,0 +1,78 @@
+name: Project Site CI
+
+on:
+  pull_request:
+    paths:
+      - 'project-site/**'
+      - 'frontend/**'
+      - 'backend/**'
+      - 'docs/**'
+      - 'tests/**'
+      - '**/*.[mM][dD]'
+      - '.github/workflows/project-site.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'project-site/**'
+      - 'frontend/**'
+      - 'backend/**'
+      - 'docs/**'
+      - 'tests/**'
+      - '**/*.[mM][dD]'
+      - '.github/workflows/project-site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize production runs from build through deployment. Validation runs use independent groups.
+concurrency:
+  group: ${{ (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) && 'project-site-pages' || format('project-site-validation-{0}', github.run_id) }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: project-site
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: project-site/package-lock.json
+      - run: npm ci
+      - run: npm run test:evidence
+      - run: npm run validate:evidence
+      - run: npm run build
+      - name: Upload production website
+        uses: actions/upload-artifact@v7
+        with:
+          name: project-site-dist
+          path: project-site/dist/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: project-site/dist/
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
