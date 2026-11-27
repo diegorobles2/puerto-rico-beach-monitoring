@@ -1,0 +1,48 @@
+[
+  {
+    "id": "O1",
+    "title": "Beach discovery",
+    "status": "partial",
+    "statusLabel": "Partially verified · Browser fixtures",
+    "summary": "Playwright covers map loading, search, filtering, geolocation, and beach details with local fixtures. Issue #42 is closed. The available local run metadata records a failed run.",
+    "testCommands": [{ "cwd": "frontend", "command": "npm run test:e2e -- discovery.e2e.ts" }],
+    "references": ["frontend/e2e/README.md"],
+    "artifacts": []
+  },
+  {
+    "id": "O2",
+    "title": "Condition freshness and availability",
+    "status": "partial",
+    "statusLabel": "Partially verified · Freshness scenarios",
+    "summary": "Browser fixtures exercise stale and unavailable conditions. The available local Playwright run metadata records a failed run. The freshness notes describe backend checks and remaining acceptance work.",
+    "testCommands": [{ "cwd": "frontend", "command": "npm run test:e2e -- conditions.e2e.ts" }],
+    "references": ["frontend/e2e/README.md", "docs/testing/drna-freshness.md", "docs/testing/nws-staleness-and-failure.md"],
+    "artifacts": []
+  },
+  {
+    "id": "O3",
+    "title": "API performance and outage behavior",
+    "status": "partial",
+    "statusLabel": "Partially verified · Local load run met thresholds",
+    "summary": "Local verification notes record a successful 50-user, 10-minute k6 run against the PostgreSQL-backed API. The raw acceptance report is absent from this checkout. The outage regression used injected failures, and hosted performance remains unverified.",
+    "testCommands": [
+      { "cwd": "backend", "command": "npm run test:load" },
+      { "cwd": "backend", "command": "npm test -- --runInBand src/conditions/source-outages.http.spec.ts" }
+    ],
+    "references": ["tests/load/local-verification.md", "tests/load/README.md"],
+    "artifacts": []
+  },
+  {
+    "id": "O4",
+    "title": "Usability and accessibility",
+    "status": "partial",
+    "statusLabel": "Partially verified · Human usability results pending",
+    "summary": "The repository documents synthetic usability checks, automated accessibility coverage, and a manual accessibility check. Human usability task scores are pending.",
+    "testCommands": [
+      { "cwd": "frontend", "command": "npm run test:usability" },
+      { "cwd": "frontend", "command": "npm run test:e2e -- accessibility.e2e.ts usability.e2e.ts" }
+    ],
+    "references": ["tests/usability/README.md", "docs/testing/accessibility.md"],
+    "artifacts": []
+  }
+]

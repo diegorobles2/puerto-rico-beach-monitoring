@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A project overview and verification index for Puerto Rico Beach Monitoring." />
+    <title>Puerto Rico Beach Monitoring</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="hero">
+      <div class="container">
+        <nav aria-label="Project sections">
+          <a class="brand" href="#overview">PR Beach Monitoring</a>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="#verification">Evidence</a></li>
+          </ul>
+        </nav>
+        <div class="hero-content">
+          <h1>Puerto Rico Beach Monitoring</h1>
+          <p>Water quality, rip-current risk, and active alerts in one beach map.</p>
+          <a class="button" href="#verification">Explore verification evidence</a>
+        </div>
+      </div>
+    </header>
+    <main id="main" tabindex="-1">
+      <section class="container section" aria-labelledby="overview">
+        <h2 id="overview">Project overview</h2>
+        <p class="intro">Planning a beach visit means checking advisories and forecasts published by different agencies. This capstone brings them together by beach so visitors can see what each source reported and when.</p>
+        <dl class="features">
+          <div>
+            <dt>Find a beach</dt>
+            <dd>Browse the interactive map, search by name, filter by municipality, or use your location to sort beaches by distance.</dd>
+          </div>
+          <div>
+            <dt>Compare conditions</dt>
+            <dd>View water-quality measurements and advisories from Puerto Rico’s Department of Natural and Environmental Resources (DRNA) alongside National Weather Service (NWS) rip-current risk and active alerts.</dd>
+          </div>
+          <div>
+            <dt>Check the source</dt>
+            <dd>See source links and timestamps for each condition. The app flags stale and unavailable data and labels historical readings where available.</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="architecture section" aria-labelledby="architecture">
+        <div class="container">
+          <h2 id="architecture">System architecture</h2>
+          <p class="intro">The backend imports agency data into PostgreSQL. The React app reads the stored conditions through the NestJS REST API.</p>
+          <figure>
+            <ol class="flow">
+              <li><strong>DRNA + NWS</strong><span>Water-quality reports, surf forecasts, and alerts</span></li>
+              <li><strong>NestJS ingestion</strong><span>Scheduled retrieval, parsing, and beach mapping</span></li>
+              <li><strong>PostgreSQL</strong><span>Beach catalog and condition records</span></li>
+              <li><strong>NestJS REST API</strong><span>Conditions, timestamps, and source links by beach</span></li>
+              <li><strong>React + Leaflet</strong><span>Interactive map and condition cards</span></li>
+            </ol>
+            <figcaption>When scheduling is enabled, NestJS refreshes each source on startup, then checks DRNA every six hours and NWS every 30 minutes. These intervals govern retrieval. The agencies publish on their own schedules.</figcaption>
+          </figure>
+        </div>
+      </section>
+      <section class="container section demo" aria-labelledby="demo">
+        <div>
+          <h2 id="demo">Demo and repository</h2>
+          <p>Public demo pending. The repository includes local setup and a repeatable demo checklist.</p>
+        </div>
+        <a class="button button-dark" id="repository" href="https://github.com/diegorobles2/puerto-rico-beach-monitoring">View repository on GitHub</a>
+      </section>
+      <section class="evidence section" aria-labelledby="verification">
+        <div class="container">
+          <h2 id="verification">O1–O4 verification evidence</h2>
+          <p class="intro">Each status applies to the verification work named in its label. The references document the scope and limits of that work.</p>
+          <ul id="objectives" role="list"></ul>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
